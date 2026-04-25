@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+Of course! Here's the full updated code to paste in:
+html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,6 +29,13 @@
             font-size: 36px;
             font-weight: 800;
             margin-bottom: 12px;
+        }
+        .quote {
+            font-size: 15px;
+            font-style: italic;
+            color: #4A4A4A;
+            margin-bottom: 16px;
+            line-height: 1.6;
         }
         .subline {
             font-size: 16px;
@@ -109,13 +117,13 @@
             <div class="dot"></div>
         </div>
         <div class="header">Quick Skill Check</div>
-        <div class="subline">This takes 2 minutes. Be honest — the more accurate you are, the better your results.</div>
+        <div class="quote">"You only live once, but if you work it right, once is enough."</div>
+        <div class="subline">This will only take 2 minutes. Be honest, the more accurate you are, the better your results.</div>
         <div id="questions"></div>
         <button class="submit-btn" onclick="submitAnswers()">Submit My Answers</button>
     </div>
 
     <script>
-        // Placeholder questions — will be replaced by Claude generated ones
         const questions = [
             {
                 q: "Your friend asks you to write a caption for their business. What do you do?",
@@ -189,10 +197,14 @@
 
         function selectOption(qIndex, optIndex, el) {
             const block = el.closest('.question-block');
+            const wasSelected = el.classList.contains('selected');
             block.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-            selected[qIndex] = optIndex;
-            // Update progress dots
+            if (!wasSelected) {
+                el.classList.add('selected');
+                selected[qIndex] = optIndex;
+            } else {
+                delete selected[qIndex];
+            }
             const answered = Object.keys(selected).length;
             dots.forEach((dot, i) => {
                 dot.classList.toggle('active', i < answered);
@@ -204,7 +216,6 @@
                 alert('Please answer all 6 questions before submitting.');
                 return;
             }
-            // Will connect to Airtable here later
             alert('Answers submitted! Results coming next.');
         }
     </script>
