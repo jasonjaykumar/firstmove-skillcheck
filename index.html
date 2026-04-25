@@ -75,8 +75,40 @@
             background: #0A0A0A;
             color: #E8E6E0;
         }
-        .submit-btn {
+        .email-section {
             margin-top: 48px;
+            margin-bottom: 24px;
+        }
+        .email-label {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .email-sublabel {
+            font-size: 14px;
+            color: #6B6B6B;
+            margin-bottom: 16px;
+        }
+        .email-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 50px;
+            border: 1.5px solid #0A0A0A;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            color: #0A0A0A;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .email-input::placeholder {
+            color: #6B6B6B;
+        }
+        .email-input:focus {
+            background: #0A0A0A08;
+        }
+        .submit-btn {
+            margin-top: 16px;
             width: 100%;
             padding: 18px;
             background: #0A0A0A;
@@ -102,6 +134,12 @@
             background: #C8C6C0;
         }
         .dot.active { background: #0A0A0A; }
+        .privacy-note {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-top: 16px;
+        }
     </style>
 </head>
 <body>
@@ -119,7 +157,15 @@
         <div class="quote">"You only live once, but if you work it right, once is enough."</div>
         <div class="subline">This will only take 2 minutes. Be honest, the more accurate you are, the better your results.</div>
         <div id="questions"></div>
+
+        <div class="email-section">
+            <div class="email-label">Where should we send your results?</div>
+            <div class="email-sublabel">We'll email you your personalised hustle plan the moment it's ready.</div>
+            <input class="email-input" type="email" id="emailInput" placeholder="your@email.com" />
+        </div>
+
         <button class="submit-btn" onclick="submitAnswers()">Submit My Answers</button>
+        <div class="privacy-note">No spam. Ever. Just your results.</div>
     </div>
 
     <script>
@@ -215,7 +261,13 @@
                 alert('Please answer all 6 questions before submitting.');
                 return;
             }
-            alert('Answers submitted! Results coming next.');
+            const email = document.getElementById('emailInput').value;
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address so we can send your results.');
+                return;
+            }
+            // Will connect to Make webhook here next
+            alert('Got it! Your results are being calculated. Check your email shortly.');
         }
     </script>
 </body>
