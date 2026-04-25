@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Check — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 48px;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .subline {
+            font-size: 16px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+        .question-block {
+            margin-bottom: 36px;
+        }
+        .question-text {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option {
+            padding: 14px 20px;
+            border-radius: 50px;
+            border: 1.5px solid #0A0A0A;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            color: #0A0A0A;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .option:hover {
+            background: #0A0A0A20;
+        }
+        .option.selected {
+            background: #0A0A0A;
+            color: #E8E6E0;
+        }
+        .submit-btn {
+            margin-top: 48px;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .submit-btn:hover { opacity: 0.85; }
+        .progress {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 48px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #C8C6C0;
+        }
+        .dot.active { background: #0A0A0A; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div class="progress">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div class="header">Quick Skill Check</div>
+        <div class="subline">This takes 2 minutes. Be honest — the more accurate you are, the better your results.</div>
+        <div id="questions"></div>
+        <button class="submit-btn" onclick="submitAnswers()">Submit My Answers</button>
+    </div>
+
+    <script>
+        // Placeholder questions — will be replaced by Claude generated ones
+        const questions = [
+            {
+                q: "Your friend asks you to write a caption for their business. What do you do?",
+                options: [
+                    "Write three versions and explain why each works",
+                    "Write one solid caption",
+                    "Give them a rough idea and ask them to write it"
+                ]
+            },
+            {
+                q: "Someone shows you a design and asks what's wrong with it. What happens?",
+                options: [
+                    "You spot multiple issues and explain how to fix them",
+                    "You notice something feels off but can't fully explain it",
+                    "It looks fine to you"
+                ]
+            },
+            {
+                q: "How often do you actually finish creative projects you start?",
+                options: [
+                    "Most of the time — I have examples to show",
+                    "Sometimes — depends on motivation",
+                    "Rarely — I lose interest"
+                ]
+            },
+            {
+                q: "Someone pays you ₹500 for a task. What's your instinct?",
+                options: [
+                    "Deliver more than they expected",
+                    "Deliver exactly what they asked",
+                    "You'd be nervous about whether it's good enough"
+                ]
+            },
+            {
+                q: "How comfortable are you sending a cold message to a stranger for work?",
+                options: [
+                    "Comfortable — I'd know what to say",
+                    "A little awkward but I'd do it",
+                    "Very uncomfortable"
+                ]
+            },
+            {
+                q: "Have you ever taught someone else how to do something?",
+                options: [
+                    "Yes — and they actually got it",
+                    "Tried once or twice",
+                    "Not really"
+                ]
+            }
+        ];
+
+        const container = document.getElementById('questions');
+        const dots = document.querySelectorAll('.dot');
+        let selected = {};
+
+        questions.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = 'question-block';
+            block.innerHTML = `
+                <div class="question-text">Q${index + 1}. ${item.q}</div>
+                <div class="options">
+                    ${item.options.map((opt, i) => `
+                        <button class="option" onclick="selectOption(${index}, ${i}, this)">
+                            ${['A', 'B', 'C'][i]}) ${opt}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(block);
+        });
+
+        function selectOption(qIndex, optIndex, el) {
+            const block = el.closest('.question-block');
+            block.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            selected[qIndex] = optIndex;
+            // Update progress dots
+            const answered = Object.keys(selected).length;
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i < answered);
+            });
+        }
+
+        function submitAnswers() {
+            if (Object.keys(selected).length < questions.length) {
+                alert('Please answer all 6 questions before submitting.');
+                return;
+            }
+            // Will connect to Airtable here later
+            alert('Answers submitted! Results coming next.');
+        }
+    </script>
+</body>
+</html>
