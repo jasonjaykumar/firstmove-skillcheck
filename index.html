@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+Perfect, got it! Now go back to your GitHub index.html and delete everything and paste this updated code — I've connected the submit button to your Make webhook:
+html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -122,6 +123,10 @@
             transition: opacity 0.2s ease;
         }
         .submit-btn:hover { opacity: 0.85; }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .progress {
             display: flex;
             gap: 8px;
@@ -164,7 +169,7 @@
             <input class="email-input" type="email" id="emailInput" placeholder="your@email.com" />
         </div>
 
-        <button class="submit-btn" onclick="submitAnswers()">Submit My Answers</button>
+        <button class="submit-btn" id="submitBtn" onclick="submitAnswers()">Submit My Answers</button>
         <div class="privacy-note">No spam. Ever. Just your results.</div>
     </div>
 
@@ -256,7 +261,7 @@
             });
         }
 
-        function submitAnswers() {
+        async function submitAnswers() {
             if (Object.keys(selected).length < questions.length) {
                 alert('Please answer all 6 questions before submitting.');
                 return;
@@ -266,8 +271,36 @@
                 alert('Please enter a valid email address so we can send your results.');
                 return;
             }
-            // Will connect to Make webhook here next
-            alert('Got it! Your results are being calculated. Check your email shortly.');
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            const answers = {
+                email: email,
+                q1: selected[0],
+                q2: selected[1],
+                q3: selected[2],
+                q4: selected[3],
+                q5: selected[4],
+                q6: selected[5]
+            };
+
+            try {
+                await fetch('https://hook.eu1.make.com/7x4tvsugf9e3qi4dwkljkoumgc481d9g', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(answers)
+                });
+                btn.textContent = 'Submitted!';
+                setTimeout(() => {
+                    window.location.href = 'https://jasonjaykumar.github.io/firstmove-skillcheck/results.html';
+                }, 1000);
+            } catch (error) {
+                btn.disabled = false;
+                btn.textContent = 'Submit My Answers';
+                alert('Something went wrong. Please try again.');
+            }
         }
     </script>
 </body>
