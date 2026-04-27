@@ -69,9 +69,7 @@
             text-align: left;
             transition: all 0.2s ease;
         }
-        .option:hover {
-            background: #0A0A0A20;
-        }
+        .option:hover { background: #0A0A0A20; }
         .option.selected {
             background: #0A0A0A;
             color: #E8E6E0;
@@ -100,14 +98,8 @@
             font-size: 15px;
             color: #0A0A0A;
             outline: none;
-            transition: all 0.2s ease;
         }
-        .email-input::placeholder {
-            color: #6B6B6B;
-        }
-        .email-input:focus {
-            background: #0A0A0A08;
-        }
+        .email-input::placeholder { color: #6B6B6B; }
         .submit-btn {
             margin-top: 16px;
             width: 100%;
@@ -123,10 +115,7 @@
             transition: opacity 0.2s ease;
         }
         .submit-btn:hover { opacity: 0.85; }
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .progress {
             display: flex;
             gap: 8px;
@@ -145,6 +134,18 @@
             text-align: center;
             margin-top: 16px;
         }
+        .loading {
+            text-align: center;
+            padding: 48px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .error {
+            text-align: center;
+            padding: 48px 0;
+            color: #0A0A0A;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -161,7 +162,7 @@
         <div class="header">Quick Skill Check</div>
         <div class="quote">"You only live once, but if you work it right, once is enough."</div>
         <div class="subline">This will only take 2 minutes. Be honest, the more accurate you are, the better your results.</div>
-        <div id="questions"></div>
+        <div id="questions"><div class="loading">Loading your personalised questions...</div></div>
 
         <div class="email-section">
             <div class="email-label">Where should we send your results?</div>
@@ -174,76 +175,77 @@
     </div>
 
     <script>
-        const questions = [
-            {
-                q: "Your friend asks you to write a caption for their business. What do you do?",
-                options: [
-                    "Write three versions and explain why each works",
-                    "Write one solid caption",
-                    "Give them a rough idea and ask them to write it"
-                ]
-            },
-            {
-                q: "Someone shows you a design and asks what's wrong with it. What happens?",
-                options: [
-                    "You spot multiple issues and explain how to fix them",
-                    "You notice something feels off but can't fully explain it",
-                    "It looks fine to you"
-                ]
-            },
-            {
-                q: "How often do you actually finish creative projects you start?",
-                options: [
-                    "Most of the time — I have examples to show",
-                    "Sometimes — depends on motivation",
-                    "Rarely — I lose interest"
-                ]
-            },
-            {
-                q: "Someone pays you ₹500 for a task. What's your instinct?",
-                options: [
-                    "Deliver more than they expected",
-                    "Deliver exactly what they asked",
-                    "You'd be nervous about whether it's good enough"
-                ]
-            },
-            {
-                q: "How comfortable are you sending a cold message to a stranger for work?",
-                options: [
-                    "Comfortable — I'd know what to say",
-                    "A little awkward but I'd do it",
-                    "Very uncomfortable"
-                ]
-            },
-            {
-                q: "Have you ever taught someone else how to do something?",
-                options: [
-                    "Yes — and they actually got it",
-                    "Tried once or twice",
-                    "Not really"
-                ]
-            }
-        ];
+        const AIRTABLE_API_KEY = 'pat5ZEOj8QkNtGpxB.357be6f659fae796de02ec4e44e9dde2d22f6c21293d32a9bf0d096a5beb0ab0';
+        const AIRTABLE_BASE_ID = 'appTaeqaoeQ88aeq';
+        const AIRTABLE_TABLE = 'Side Hustle Generator';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/7x4tvsugf9e3qi4dwkljkoumgc481d9g';
 
-        const container = document.getElementById('questions');
-        const dots = document.querySelectorAll('.dot');
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+
+        let questions = [];
         let selected = {};
 
-        questions.forEach((item, index) => {
-            const block = document.createElement('div');
-            block.className = 'question-block';
-            block.innerHTML = `
-                <div class="question-text">Q${index + 1}. ${item.q}</div>
-                <div class="options">
-                    ${item.options.map((opt, i) => `
-                        <button class="option" onclick="selectOption(${index}, ${i}, this)">
-                            ${['A', 'B', 'C'][i]}) ${opt}
-                        </button>
-                    `).join('')}
-                </div>
-            `;
-            container.appendChild(block);
-        });
+        async function loadQuestions() {
+            const container = document.getElementById('questions');
+
+            if (!recordId) {
+                container.innerHTML = '<div class="error">No record ID found. Please use the link sent to your email.</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}/${recordId}`, {
+                    headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+                });
+
+                const data = await response.json();
+                const rawQuestions = data.fields['Skill Check Questions'];
+
+                if (!rawQuestions) {
+                    container.innerHTML = '<div class="error">Questions not found. Please try again.</div>';
+                    return;
+                }
+
+                questions = parseQuestions(rawQuestions);
+                renderQuestions();
+
+            } catch (err) {
+                container.innerHTML = '<div class="error">Something went wrong loading your questions. Please try again.</div>';
+            }
+        }
+
+        function parseQuestions(raw) {
+            const blocks = raw.split(/Q\d+:/).filter(b => b.trim());
+            return blocks.map(block => {
+                const lines = block.trim().split('\n').filter(l => l.trim());
+                const q = lines[0].trim();
+                const options = lines.slice(1).map(l => l.replace(/^[ABC]\)\s*/, '').trim());
+                return { q, options };
+            });
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questions');
+            const dots = document.querySelectorAll('.dot');
+            container.innerHTML = '';
+
+            questions.forEach((item, index) => {
+                const block = document.createElement('div');
+                block.className = 'question-block';
+                block.innerHTML = `
+                    <div class="question-text">Q${index + 1}. ${item.q}</div>
+                    <div class="options">
+                        ${item.options.map((opt, i) => `
+                            <button class="option" onclick="selectOption(${index}, ${i}, this)">
+                                ${['A', 'B', 'C'][i]}) ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(block);
+            });
+        }
 
         function selectOption(qIndex, optIndex, el) {
             const block = el.closest('.question-block');
@@ -256,19 +258,19 @@
                 delete selected[qIndex];
             }
             const answered = Object.keys(selected).length;
-            dots.forEach((dot, i) => {
+            document.querySelectorAll('.dot').forEach((dot, i) => {
                 dot.classList.toggle('active', i < answered);
             });
         }
 
         async function submitAnswers() {
             if (Object.keys(selected).length < questions.length) {
-                alert('Please answer all 6 questions before submitting.');
+                alert('Please answer all questions before submitting.');
                 return;
             }
             const email = document.getElementById('emailInput').value;
             if (!email || !email.includes('@')) {
-                alert('Please enter a valid email address so we can send your results.');
+                alert('Please enter a valid email address.');
                 return;
             }
 
@@ -276,25 +278,24 @@
             btn.disabled = true;
             btn.textContent = 'Submitting...';
 
-            const answers = {
-                email: email,
-                q1: selected[0],
-                q2: selected[1],
-                q3: selected[2],
-                q4: selected[3],
-                q5: selected[4],
-                q6: selected[5]
-            };
-
             try {
-                await fetch('https://hook.eu1.make.com/7x4tvsugf9e3qi4dwkljkoumgc481d9g', {
+                await fetch(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(answers)
+                    body: JSON.stringify({
+                        email,
+                        recordId,
+                        q1: selected[0],
+                        q2: selected[1],
+                        q3: selected[2],
+                        q4: selected[3],
+                        q5: selected[4],
+                        q6: selected[5]
+                    })
                 });
                 btn.textContent = 'Submitted!';
                 setTimeout(() => {
-                    window.location.href = 'https://jasonjaykumar.github.io/firstmove-skillcheck/results.html';
+                    window.location.href = 'results.html';
                 }, 1000);
             } catch (error) {
                 btn.disabled = false;
@@ -302,6 +303,8 @@
                 alert('Something went wrong. Please try again.');
             }
         }
+
+        loadQuestions();
     </script>
 </body>
 </html>
