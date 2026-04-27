@@ -1,5 +1,4 @@
 
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -175,9 +174,7 @@
     </div>
 
     <script>
-        const AIRTABLE_API_KEY = 'pat5ZEOj8QkNtGpxB.357be6f659fae796de02ec4e44e9dde2d22f6c21293d32a9bf0d096a5beb0ab0';
-        const AIRTABLE_BASE_ID = 'appTaeqaoeQ88aeq';
-        const AIRTABLE_TABLE = 'Side Hustle Generator';
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
         const WEBHOOK_URL = 'https://hook.eu1.make.com/7x4tvsugf9e3qi4dwkljkoumgc481d9g';
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -195,10 +192,7 @@
             }
 
             try {
-                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}/${recordId}`, {
-                    headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
-                });
-
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
                 const data = await response.json();
                 const rawQuestions = data.fields['Skill Check Questions'];
 
@@ -227,7 +221,6 @@
 
         function renderQuestions() {
             const container = document.getElementById('questions');
-            const dots = document.querySelectorAll('.dot');
             container.innerHTML = '';
 
             questions.forEach((item, index) => {
