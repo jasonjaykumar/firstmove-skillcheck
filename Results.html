@@ -1,0 +1,276 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Results — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 48px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+        .badge-ready {
+            background: #0A0A0A;
+            color: #E8E6E0;
+        }
+        .badge-almost {
+            background: #4A4A4A;
+            color: #E8E6E0;
+        }
+        .badge-not-ready {
+            background: #6B6B6B;
+            color: #E8E6E0;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+        .score {
+            font-size: 17px;
+            color: #4A4A4A;
+            margin-bottom: 32px;
+        }
+        .feedback {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #0A0A0A;
+            margin-bottom: 40px;
+            padding: 24px;
+            background: #0A0A0A0D;
+            border-radius: 16px;
+        }
+        .resources-section {
+            margin-bottom: 40px;
+        }
+        .resources-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .resources-sub {
+            font-size: 14px;
+            color: #6B6B6B;
+            margin-bottom: 20px;
+        }
+        .resource-card {
+            padding: 16px 20px;
+            border: 1.5px solid #C8C6C0;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            background: transparent;
+        }
+        .resource-type {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 4px;
+        }
+        .resource-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .resource-desc {
+            font-size: 13px;
+            color: #4A4A4A;
+        }
+        .warning {
+            font-size: 14px;
+            color: #4A4A4A;
+            padding: 16px 20px;
+            border-left: 3px solid #0A0A0A;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-secondary {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            color: #6B6B6B;
+            border: 1.5px solid #C8C6C0;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover { border-color: #0A0A0A; color: #0A0A0A; }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div id="content"><div class="loading">Loading your results...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+
+        async function loadResults() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const grade = data.fields['Grade'] || '';
+                const name = data.fields['Name'] || 'there';
+
+                let status = 'NOT_READY';
+                let score = '';
+
+                const scoreMatch = grade.match(/(\d+)\/12/);
+                if (scoreMatch) score = scoreMatch[0];
+
+                if (grade.includes('READY') && !grade.includes('ALMOST')) status = 'READY';
+                else if (grade.includes('ALMOST')) status = 'ALMOST';
+                else status = 'NOT_READY';
+
+                renderResults(status, score, name, grade);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        function renderResults(status, score, name, fullGrade) {
+            const content = document.getElementById('content');
+
+            if (status === 'READY') {
+                content.innerHTML = `
+                    <div class="status-badge badge-ready">READY</div>
+                    <div class="header">You're ready, ${name}.</div>
+                    <div class="score">Score: ${score} — solid enough to start earning.</div>
+                    <div class="feedback">You've got the skills to back it up. Time to put them to work. Your personalised hustle recommendations are ready.</div>
+                    <a class="btn-primary" href="recommendations.html?id=${recordId}">Show Me My Moves →</a>
+                `;
+            } else if (status === 'ALMOST') {
+                content.innerHTML = `
+                    <div class="status-badge badge-almost">ALMOST THERE</div>
+                    <div class="header">You're close, ${name}.</div>
+                    <div class="score">Score: ${score} — good foundation, a few gaps to close.</div>
+                    <div class="feedback">You're not far off. A little focused learning and you'll be ready to charge for this. Rushing now means your first client notices the gaps — and that's harder to recover from than taking one more week to sharpen up.</div>
+                    <div class="resources-section">
+                        <div class="resources-title">Close the gap first.</div>
+                        <div class="resources-sub">These are free. One week here will make you noticeably better.</div>
+                        <div class="resource-card">
+                            <div class="resource-type">YOUTUBE</div>
+                            <div class="resource-name">Search your skill + "beginner to intermediate"</div>
+                            <div class="resource-desc">Find a creator who explains the specific gaps in your skill area and watch 3-5 videos this week.</div>
+                        </div>
+                        <div class="resource-card">
+                            <div class="resource-type">FREE COURSE</div>
+                            <div class="resource-name">Coursera — Audit for free</div>
+                            <div class="resource-desc">Go to coursera.org, find a course in your skill area and audit it for free. No certificate needed — just the knowledge.</div>
+                        </div>
+                        <div class="resource-card">
+                            <div class="resource-type">PRACTICE</div>
+                            <div class="resource-name">Do one real project this week</div>
+                            <div class="resource-desc">Pick a fictional client, do the work for free, and build something you can show. Practice beats theory every time.</div>
+                        </div>
+                    </div>
+                    <div class="warning">Most teens who spend one focused week here land clients faster and charge more. The ones who skip this struggle to get their second client.</div>
+                    <a class="btn-primary" href="recommendations.html?id=${recordId}">I'm ready, show me my moves →</a>
+                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip and continue anyway</a>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="status-badge badge-not-ready">NOT YET</div>
+                    <div class="header">You need more time, ${name}.</div>
+                    <div class="score">Score: ${score} — the skill isn't there yet.</div>
+                    <div class="feedback">This isn't a knock — it's honest. Charging for something you're not ready for damages your reputation before it's even built. The good news: the gap is closeable. Two to four weeks of focused learning and you'll be in a completely different place.</div>
+                    <div class="resources-section">
+                        <div class="resources-title">Your learning path.</div>
+                        <div class="resources-sub">All free. Start here before you start hustling.</div>
+                        <div class="resource-card">
+                            <div class="resource-type">YOUTUBE</div>
+                            <div class="resource-name">Search your skill + "complete beginner guide"</div>
+                            <div class="resource-desc">Find one solid creator and watch their beginner series from start to finish before jumping around.</div>
+                        </div>
+                        <div class="resource-card">
+                            <div class="resource-type">FREE COURSE</div>
+                            <div class="resource-name">Coursera or Khan Academy — audit for free</div>
+                            <div class="resource-desc">Both platforms let you access course content for free. Find your skill area and start from the basics.</div>
+                        </div>
+                        <div class="resource-card">
+                            <div class="resource-type">COMMUNITY</div>
+                            <div class="resource-name">Find a Reddit or Discord community for your skill</div>
+                            <div class="resource-desc">Search Reddit for your skill area. Read what beginners ask, what experts answer, and what mistakes people make.</div>
+                        </div>
+                        <div class="resource-card">
+                            <div class="resource-type">PRACTICE</div>
+                            <div class="resource-name">Build something every single day</div>
+                            <div class="resource-desc">Even 20 minutes of practice daily beats 3 hours on weekends. Consistency is what actually builds skill.</div>
+                        </div>
+                    </div>
+                    <div class="warning">Come back and retake the skill check once you've gone through these. You'll be surprised how different it feels when you actually know what you're doing.</div>
+                    <a class="btn-primary" href="index.html?id=${recordId}">Retake the Skill Check</a>
+                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip and continue anyway</a>
+                `;
+            }
+        }
+
+        loadResults();
+    </script>
+</body>
+</html>
