@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+Here's the full updated recommendations.html:
+html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -205,8 +206,8 @@
                 const fields = data.fields;
                 const name = capitalizeName(fields['Name']);
 
-                if (fields['Hustle Recommendations']) {
-                    renderRecommendations(fields['Hustle Recommendations'], name);
+                if (fields['Hustle recommendations']) {
+                    renderRecommendations(fields['Hustle recommendations'], name);
                     return;
                 }
 
@@ -255,8 +256,8 @@
                 const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
                 const data = await response.json();
 
-                if (data.fields['Hustle Recommendations']) {
-                    renderRecommendations(data.fields['Hustle Recommendations'], name);
+                if (data.fields['Hustle recommendations']) {
+                    renderRecommendations(data.fields['Hustle recommendations'], name);
                 } else {
                     setTimeout(() => pollForRecommendations(name, attempts + 1), 3000);
                 }
@@ -273,9 +274,16 @@
 
             lines.forEach(line => {
                 line = line.trim();
-                if (!line) return;
+                if (!line || line === '---') {
+                    if (line === '---' && current) {
+                        hustleList.push(current);
+                        current = null;
+                        section = null;
+                    }
+                    return;
+                }
 
-                if (line.startsWith('₹') || line.match(/^[₹\d]/)) {
+                if (line.match(/^₹[\d,]+/)) {
                     if (current) current.meta = line;
                 } else if (line.startsWith('Best market:')) {
                     if (current) current.market = line.replace('Best market:', '').trim();
@@ -283,15 +291,14 @@
                     section = 'clients';
                 } else if (line === 'Your first three moves:') {
                     section = 'moves';
-                } else if (line.match(/^\d\./)) {
+                } else if (line.match(/^\d\.\s/)) {
                     const text = line.replace(/^\d\.\s*/, '');
                     if (section === 'clients' && current) current.clients.push(text);
                     if (section === 'moves' && current) current.moves.push(text);
-                } else if (!current || (current.meta && !current.why && section === null)) {
-                    if (current) hustleList.push(current);
+                } else if (!current) {
                     current = { name: line, meta: '', market: '', why: '', clients: [], moves: [] };
                     section = 'why';
-                } else if (section === 'why' && current) {
+                } else if (section === 'why' && current && !line.match(/^₹/)) {
                     current.why += (current.why ? ' ' : '') + line;
                 }
             });
