@@ -1,5 +1,4 @@
-Here's the full updated index.html:
-html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -183,6 +182,7 @@ html<!DOCTYPE html>
 
         let questions = [];
         let selected = {};
+        let skillArea = '';
 
         async function loadQuestions() {
             const container = document.getElementById('questions');
@@ -196,6 +196,9 @@ html<!DOCTYPE html>
                 const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
                 const data = await response.json();
                 const rawQuestions = data.fields['Skill Check Questions'];
+
+                // Grab skill area from Airtable record
+                skillArea = data.fields['Skills Multi'] || data.fields['Skills'] || '';
 
                 if (!rawQuestions) {
                     container.innerHTML = '<div class="error">Questions not found. Please try again.</div>';
@@ -281,6 +284,7 @@ html<!DOCTYPE html>
                     body: JSON.stringify({
                         email,
                         recordId,
+                        skillArea,
                         q1: selected[0],
                         q2: selected[1],
                         q3: selected[2],
