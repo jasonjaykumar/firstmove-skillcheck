@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Moves — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 48px;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .subline {
+            font-size: 16px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+        .hustle-card {
+            border: 1.5px solid #C8C6C0;
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .hustle-card:hover {
+            border-color: #0A0A0A;
+            background: #0A0A0A05;
+        }
+        .hustle-card.selected {
+            border-color: #0A0A0A;
+            border-width: 2px;
+            background: #0A0A0A08;
+        }
+        .hustle-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 28px;
+            height: 28px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .hustle-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .hustle-meta {
+            font-size: 13px;
+            color: #6B6B6B;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .hustle-market {
+            font-size: 13px;
+            color: #4A4A4A;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+        .hustle-why {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #0A0A0A;
+            margin-bottom: 20px;
+        }
+        .hustle-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 8px;
+        }
+        .hustle-list {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+        .hustle-list li {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #4A4A4A;
+            padding-left: 16px;
+            position: relative;
+            margin-bottom: 4px;
+        }
+        .hustle-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #0A0A0A;
+            font-weight: 700;
+        }
+        .select-hint {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .generating {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .generating-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .generating-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+        }
+        .divider {
+            height: 1px;
+            background: #C8C6C0;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div id="content"><div class="loading">Loading your moves...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/4gj1jeoq38vm953wes1ryn84gtkfr3l4';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+
+        let selectedHustle = null;
+        let hustles = [];
+
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        async function loadRecommendations() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const fields = data.fields;
+                const name = capitalizeName(fields['Name']);
+
+                if (fields['Hustle Recommendations']) {
+                    renderRecommendations(fields['Hustle Recommendations'], name);
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="generating">
+                        <div class="generating-title">Building your moves, ${name}.</div>
+                        <div class="generating-sub">We're putting together 4 hustle recommendations tailored specifically to you. This takes about 30 seconds.</div>
+                    </div>
+                `;
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        name: fields['Name'],
+                        age: fields['Age'],
+                        city: fields['City'],
+                        skillArea: fields['Skills Multi'],
+                        enjoysDoing: fields['Enjoys doing'],
+                        timeAvailable: fields['Time Available'],
+                        earningGoal: fields['Earning goal'],
+                        moneyMotivation: fields['Money Motivation'],
+                        timeline: fields['Timeline'],
+                        moneyToStart: fields['Money to start'],
+                        deviceAccess: fields['Device access multi'],
+                        socialMedia: fields['Social Media'],
+                        previousAttempts: fields['Previous Attempts']
+                    })
+                });
+
+                setTimeout(() => pollForRecommendations(name), 5000);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        async function pollForRecommendations(name, attempts = 0) {
+            if (attempts > 10) {
+                document.getElementById('content').innerHTML = '<p>This is taking longer than expected. Please refresh the page.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+
+                if (data.fields['Hustle Recommendations']) {
+                    renderRecommendations(data.fields['Hustle Recommendations'], name);
+                } else {
+                    setTimeout(() => pollForRecommendations(name, attempts + 1), 3000);
+                }
+            } catch (err) {
+                setTimeout(() => pollForRecommendations(name, attempts + 1), 3000);
+            }
+        }
+
+        function parseHustles(raw) {
+            const lines = raw.split('\n');
+            const hustleList = [];
+            let current = null;
+            let section = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                if (line.startsWith('₹') || line.match(/^[₹\d]/)) {
+                    if (current) current.meta = line;
+                } else if (line.startsWith('Best market:')) {
+                    if (current) current.market = line.replace('Best market:', '').trim();
+                } else if (line === 'How to find your first client:') {
+                    section = 'clients';
+                } else if (line === 'Your first three moves:') {
+                    section = 'moves';
+                } else if (line.match(/^\d\./)) {
+                    const text = line.replace(/^\d\.\s*/, '');
+                    if (section === 'clients' && current) current.clients.push(text);
+                    if (section === 'moves' && current) current.moves.push(text);
+                } else if (!current || (current.meta && !current.why && section === null)) {
+                    if (current) hustleList.push(current);
+                    current = { name: line, meta: '', market: '', why: '', clients: [], moves: [] };
+                    section = 'why';
+                } else if (section === 'why' && current) {
+                    current.why += (current.why ? ' ' : '') + line;
+                }
+            });
+
+            if (current) hustleList.push(current);
+            return hustleList.filter(h => h.name && h.why);
+        }
+
+        function renderRecommendations(raw, name) {
+            hustles = parseHustles(raw);
+            const content = document.getElementById('content');
+
+            content.innerHTML = `
+                <div class="header">Your moves, ${name}.</div>
+                <div class="subline">We built these around you specifically. Pick the one that feels right — you can always come back for the others.</div>
+                <div id="hustleCards"></div>
+                <div class="select-hint">Tap a hustle to select it</div>
+                <button class="btn-primary" id="continueBtn" disabled onclick="continueToNiche()">Lock In This Move →</button>
+            `;
+
+            const cards = document.getElementById('hustleCards');
+            hustles.forEach((hustle, index) => {
+                const card = document.createElement('div');
+                card.className = 'hustle-card';
+                card.onclick = () => selectHustle(index);
+                card.id = `hustle-${index}`;
+                card.innerHTML = `
+                    <div class="hustle-name">${hustle.name}</div>
+                    ${hustle.meta ? `<div class="hustle-meta">${hustle.meta}</div>` : ''}
+                    ${hustle.market ? `<div class="hustle-market">Best market: ${hustle.market}</div>` : ''}
+                    <div class="hustle-why">${hustle.why}</div>
+                    ${hustle.clients.length ? `
+                        <div class="hustle-section-title">HOW TO FIND YOUR FIRST CLIENT</div>
+                        <ul class="hustle-list">
+                            ${hustle.clients.map(c => `<li>${c}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                    ${hustle.moves.length ? `
+                        <div class="hustle-section-title">YOUR FIRST THREE MOVES</div>
+                        <ul class="hustle-list">
+                            ${hustle.moves.map(m => `<li>${m}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                `;
+                cards.appendChild(card);
+            });
+        }
+
+        function selectHustle(index) {
+            document.querySelectorAll('.hustle-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`hustle-${index}`).classList.add('selected');
+            selectedHustle = index;
+            document.getElementById('continueBtn').disabled = false;
+        }
+
+        function continueToNiche() {
+            if (selectedHustle === null) return;
+            const hustle = hustles[selectedHustle];
+            const hustleName = encodeURIComponent(hustle.name);
+            window.location.href = `niche.html?id=${recordId}&hustle=${hustleName}`;
+        }
+
+        loadRecommendations();
+    </script>
+</body>
+</html>
