@@ -1,3 +1,5 @@
+Now here's the updated results.html — delete everything and paste this:
+html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,18 +34,9 @@
             letter-spacing: 1px;
             margin-bottom: 24px;
         }
-        .badge-ready {
-            background: #0A0A0A;
-            color: #E8E6E0;
-        }
-        .badge-almost {
-            background: #4A4A4A;
-            color: #E8E6E0;
-        }
-        .badge-not-ready {
-            background: #6B6B6B;
-            color: #E8E6E0;
-        }
+        .badge-ready { background: #0A0A0A; color: #E8E6E0; }
+        .badge-almost { background: #4A4A4A; color: #E8E6E0; }
+        .badge-not-ready { background: #6B6B6B; color: #E8E6E0; }
         .header {
             font-size: 36px;
             font-weight: 800;
@@ -53,20 +46,24 @@
         .score {
             font-size: 17px;
             color: #4A4A4A;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
-        .feedback {
+        .breakdown {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4A4A4A;
+            margin-bottom: 24px;
+        }
+        .main-message {
             font-size: 16px;
-            line-height: 1.7;
+            line-height: 1.8;
             color: #0A0A0A;
             margin-bottom: 40px;
             padding: 24px;
             background: #0A0A0A0D;
             border-radius: 16px;
         }
-        .resources-section {
-            margin-bottom: 40px;
-        }
+        .resources-section { margin-bottom: 40px; }
         .resources-title {
             font-size: 20px;
             font-weight: 700;
@@ -75,39 +72,33 @@
         .resources-sub {
             font-size: 14px;
             color: #6B6B6B;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            line-height: 1.6;
         }
-        .resource-card {
-            padding: 16px 20px;
+        .day-card {
+            padding: 20px 24px;
             border: 1.5px solid #C8C6C0;
             border-radius: 16px;
             margin-bottom: 12px;
-            background: transparent;
         }
-        .resource-type {
+        .day-label {
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 1px;
             color: #6B6B6B;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
-        .resource-name {
+        .day-content {
             font-size: 15px;
+            line-height: 1.7;
+            color: #0A0A0A;
+        }
+        .day-content a {
+            color: #0A0A0A;
             font-weight: 600;
-            margin-bottom: 4px;
+            text-decoration: underline;
         }
-        .resource-desc {
-            font-size: 13px;
-            color: #4A4A4A;
-        }
-        .warning {
-            font-size: 14px;
-            color: #4A4A4A;
-            padding: 16px 20px;
-            border-left: 3px solid #0A0A0A;
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
+        .day-content a:hover { opacity: 0.7; }
         .btn-primary {
             display: block;
             width: 100%;
@@ -135,7 +126,7 @@
             border: 1.5px solid #C8C6C0;
             border-radius: 50px;
             font-family: 'Inter', sans-serif;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             text-align: center;
@@ -143,11 +134,30 @@
             transition: all 0.2s ease;
         }
         .btn-secondary:hover { border-color: #0A0A0A; color: #0A0A0A; }
+        .btn-tiny {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: #9B9B9B;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
         .loading {
             text-align: center;
             padding: 80px 0;
             color: #6B6B6B;
             font-size: 16px;
+        }
+        .divider {
+            height: 1px;
+            background: #C8C6C0;
+            margin: 40px 0;
         }
     </style>
 </head>
@@ -162,6 +172,33 @@
         const urlParams = new URLSearchParams(window.location.search);
         const recordId = urlParams.get('id');
 
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        function parseLearningPath(grade) {
+            const pathMatch = grade.match(/LEARNING_PATH:\n([\s\S]+)/);
+            if (!pathMatch) return [];
+
+            const pathText = pathMatch[1].trim();
+            const days = pathText.split(/\n(?=Day \d)/);
+
+            return days.map(day => {
+                const colonIndex = day.indexOf(':');
+                const label = day.substring(0, colonIndex).trim();
+                const content = day.substring(colonIndex + 1).trim();
+
+                // Convert URLs to clickable links
+                const linkedContent = content.replace(
+                    /(https?:\/\/[^\s]+)/g,
+                    '<a href="$1" target="_blank">$1</a>'
+                );
+
+                return { label, content: linkedContent };
+            }).filter(d => d.label && d.content);
+        }
+
         async function loadResults() {
             const content = document.getElementById('content');
 
@@ -174,98 +211,84 @@
                 const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
                 const data = await response.json();
                 const grade = data.fields['Grade'] || '';
-                const name = data.fields['Name'] || 'there';
+                const name = capitalizeName(data.fields['Name']);
 
                 let status = 'NOT_READY';
                 let score = '';
+                let breakdown = '';
 
-                const scoreMatch = grade.match(/(\d+)\/12/);
-                if (scoreMatch) score = scoreMatch[0];
+                const scoreMatch = grade.match(/SCORE:\s*(\d+\/12)/);
+                if (scoreMatch) score = scoreMatch[1];
 
-                if (grade.includes('READY') && !grade.includes('ALMOST')) status = 'READY';
-                else if (grade.includes('ALMOST')) status = 'ALMOST';
-                else status = 'NOT_READY';
+                const statusMatch = grade.match(/STATUS:\s*(READY|ALMOST|NOT_READY)/);
+                if (statusMatch) status = statusMatch[1];
 
-                renderResults(status, score, name, grade);
+                const breakdownMatch = grade.match(/BREAKDOWN:\s*([\s\S]+?)(?=\nLEARNING_PATH:)/);
+                if (breakdownMatch) breakdown = breakdownMatch[1].trim();
+
+                const learningPath = parseLearningPath(grade);
+
+                renderResults(status, score, name, breakdown, learningPath);
 
             } catch (err) {
                 content.innerHTML = '<p>Something went wrong. Please try again.</p>';
             }
         }
 
-        function renderResults(status, score, name, fullGrade) {
+        function renderLearningPath(days, title, sub) {
+            if (!days.length) return '';
+            return `
+                <div class="resources-section">
+                    <div class="resources-title">${title}</div>
+                    <div class="resources-sub">${sub}</div>
+                    ${days.map(day => `
+                        <div class="day-card">
+                            <div class="day-label">${day.label.toUpperCase()}</div>
+                            <div class="day-content">${day.content}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderResults(status, score, name, breakdown, learningPath) {
             const content = document.getElementById('content');
 
             if (status === 'READY') {
                 content.innerHTML = `
                     <div class="status-badge badge-ready">READY</div>
                     <div class="header">You're ready, ${name}.</div>
-                    <div class="score">Score: ${score} — solid enough to start earning.</div>
-                    <div class="feedback">You've got the skills to back it up. Time to put them to work. Your personalised hustle recommendations are ready.</div>
+                    <div class="score">Score: ${score}</div>
+                    <div class="breakdown">${breakdown}</div>
+                    <div class="main-message">You're ready, and that's not something we say lightly. Your answers show you actually understand this, not just on the surface. Before you go, here are a few resources worth bookmarking. The best hustlers never stop learning even when they're already earning.</div>
+                    ${renderLearningPath(learningPath, 'Keep sharpening.', 'You\'re ready to start. These will make you even better while you do.')}
+                    <div class="divider"></div>
                     <a class="btn-primary" href="recommendations.html?id=${recordId}">Show Me My Moves →</a>
                 `;
             } else if (status === 'ALMOST') {
                 content.innerHTML = `
                     <div class="status-badge badge-almost">ALMOST THERE</div>
                     <div class="header">You're close, ${name}.</div>
-                    <div class="score">Score: ${score} — good foundation, a few gaps to close.</div>
-                    <div class="feedback">You're not far off. A little focused learning and you'll be ready to charge for this. Rushing now means your first client notices the gaps — and that's harder to recover from than taking one more week to sharpen up.</div>
-                    <div class="resources-section">
-                        <div class="resources-title">Close the gap first.</div>
-                        <div class="resources-sub">These are free. One week here will make you noticeably better.</div>
-                        <div class="resource-card">
-                            <div class="resource-type">YOUTUBE</div>
-                            <div class="resource-name">Search your skill + "beginner to intermediate"</div>
-                            <div class="resource-desc">Find a creator who explains the specific gaps in your skill area and watch 3-5 videos this week.</div>
-                        </div>
-                        <div class="resource-card">
-                            <div class="resource-type">FREE COURSE</div>
-                            <div class="resource-name">Coursera — Audit for free</div>
-                            <div class="resource-desc">Go to coursera.org, find a course in your skill area and audit it for free. No certificate needed — just the knowledge.</div>
-                        </div>
-                        <div class="resource-card">
-                            <div class="resource-type">PRACTICE</div>
-                            <div class="resource-name">Do one real project this week</div>
-                            <div class="resource-desc">Pick a fictional client, do the work for free, and build something you can show. Practice beats theory every time.</div>
-                        </div>
-                    </div>
-                    <div class="warning">Most teens who spend one focused week here land clients faster and charge more. The ones who skip this struggle to get their second client.</div>
+                    <div class="score">Score: ${score}</div>
+                    <div class="breakdown">${breakdown}</div>
+                    <div class="main-message">You're closer than you think, but close isn't ready yet. There are a couple of gaps in your understanding that your first client will notice before you do. That's not a knock, it's just honest. One focused week with the right resources and you'll be in a completely different place. The teens who take this week seriously land clients faster, charge more, and don't have to deal with the confidence hit that comes from delivering work they weren't quite ready for.</div>
+                    ${renderLearningPath(learningPath, 'One week here changes everything.', 'All free. Follow this plan and you\'ll feel the difference by day 7.')}
+                    <div class="divider"></div>
                     <a class="btn-primary" href="recommendations.html?id=${recordId}">I'm ready, show me my moves →</a>
                     <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip and continue anyway</a>
                 `;
             } else {
                 content.innerHTML = `
                     <div class="status-badge badge-not-ready">NOT YET</div>
-                    <div class="header">You need more time, ${name}.</div>
-                    <div class="score">Score: ${score} — the skill isn't there yet.</div>
-                    <div class="feedback">This isn't a knock — it's honest. Charging for something you're not ready for damages your reputation before it's even built. The good news: the gap is closeable. Two to four weeks of focused learning and you'll be in a completely different place.</div>
-                    <div class="resources-section">
-                        <div class="resources-title">Your learning path.</div>
-                        <div class="resources-sub">All free. Start here before you start hustling.</div>
-                        <div class="resource-card">
-                            <div class="resource-type">YOUTUBE</div>
-                            <div class="resource-name">Search your skill + "complete beginner guide"</div>
-                            <div class="resource-desc">Find one solid creator and watch their beginner series from start to finish before jumping around.</div>
-                        </div>
-                        <div class="resource-card">
-                            <div class="resource-type">FREE COURSE</div>
-                            <div class="resource-name">Coursera or Khan Academy — audit for free</div>
-                            <div class="resource-desc">Both platforms let you access course content for free. Find your skill area and start from the basics.</div>
-                        </div>
-                        <div class="resource-card">
-                            <div class="resource-type">COMMUNITY</div>
-                            <div class="resource-name">Find a Reddit or Discord community for your skill</div>
-                            <div class="resource-desc">Search Reddit for your skill area. Read what beginners ask, what experts answer, and what mistakes people make.</div>
-                        </div>
-                        <div class="resource-card">
-                            <div class="resource-type">PRACTICE</div>
-                            <div class="resource-name">Build something every single day</div>
-                            <div class="resource-desc">Even 20 minutes of practice daily beats 3 hours on weekends. Consistency is what actually builds skill.</div>
-                        </div>
-                    </div>
-                    <div class="warning">Come back and retake the skill check once you've gone through these. You'll be surprised how different it feels when you actually know what you're doing.</div>
+                    <div class="header">Not quite yet, ${name}.</div>
+                    <div class="score">Score: ${score}</div>
+                    <div class="breakdown">${breakdown}</div>
+                    <div class="main-message">We're not going to sugarcoat this. The skill isn't there yet, and that's completely okay because everyone starts here. But going out and trying to charge for something you haven't fully built yet doesn't just waste your time, it damages your reputation before it's even started. The good news is the gap is completely closeable. Two to four focused weeks with the right resources and you'll come back a different person. We'll still be here when you're ready, and you will be ready.</div>
+                    ${renderLearningPath(learningPath, 'Your path forward.', 'Follow this plan. Come back when you\'ve done it. You\'ll be a different person.')}
+                    <div class="divider"></div>
                     <a class="btn-primary" href="index.html?id=${recordId}">Retake the Skill Check</a>
-                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip and continue anyway</a>
+                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">I understand the risk, show me anyway</a>
+                    <a class="btn-tiny" href="recommendations.html?id=${recordId}">Skip everything and continue</a>
                 `;
             }
         }
