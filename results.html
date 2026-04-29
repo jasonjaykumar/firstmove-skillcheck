@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+Here's the fully updated results.html with all 5 fixes:
+html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,6 +47,7 @@
             font-size: 17px;
             color: #4A4A4A;
             margin-bottom: 24px;
+            font-weight: 600;
         }
         .breakdown {
             font-size: 15px;
@@ -130,6 +132,7 @@
             cursor: pointer;
             text-align: center;
             text-decoration: none;
+            margin-bottom: 16px;
             transition: all 0.2s ease;
         }
         .btn-secondary:hover { border-color: #0A0A0A; color: #0A0A0A; }
@@ -158,6 +161,28 @@
             background: #C8C6C0;
             margin: 40px 0;
         }
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .score-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #0A0A0A;
+            line-height: 1;
+        }
+        .score-outof {
+            font-size: 20px;
+            color: #6B6B6B;
+            font-weight: 500;
+        }
+        .score-label {
+            font-size: 13px;
+            color: #6B6B6B;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -177,25 +202,46 @@
         }
 
         function parseLearningPath(grade) {
-            const pathMatch = grade.match(/LEARNING_PATH:\n([\s\S]+)/);
+            const pathMatch = grade.match(/LEARNING_PATH:[\s\S]*?\n([\s\S]+)/);
             if (!pathMatch) return [];
 
             const pathText = pathMatch[1].trim();
-            const days = pathText.split(/\n(?=Day \d)/);
+            const days = pathText.split(/\n(?=Day\s+\d)/i);
 
             return days.map(day => {
                 const colonIndex = day.indexOf(':');
+                if (colonIndex === -1) return null;
                 const label = day.substring(0, colonIndex).trim();
                 const content = day.substring(colonIndex + 1).trim();
-
-                // Convert URLs to clickable links
                 const linkedContent = content.replace(
-                    /(https?:\/\/[^\s]+)/g,
+                    /(https?:\/\/[^\s\)]+)/g,
                     '<a href="$1" target="_blank">$1</a>'
                 );
-
                 return { label, content: linkedContent };
-            }).filter(d => d.label && d.content);
+            }).filter(d => d && d.label && d.content);
+        }
+
+        function parseScore(grade) {
+            const patterns = [
+                /SCORE:\s*(\d+)\s*\/\s*12/i,
+                /Score:\s*(\d+)\s*\/\s*12/i,
+                /(\d+)\s*\/\s*12\s*points/i,
+                /(\d+)\/12/
+            ];
+            for (const pattern of patterns) {
+                const match = grade.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        function parseStatus(grade) {
+            if (/STATUS:\s*READY(?!.*ALMOST)/i.test(grade)) return 'READY';
+            if (/STATUS:\s*ALMOST/i.test(grade)) return 'ALMOST';
+            if (/STATUS:\s*NOT_READY/i.test(grade)) return 'NOT_READY';
+            if (/\bREADY\b(?!.*ALMOST)/i.test(grade)) return 'READY';
+            if (/\bALMOST\b/i.test(grade)) return 'ALMOST';
+            return 'NOT_READY';
         }
 
         async function loadResults() {
@@ -212,22 +258,16 @@
                 const grade = data.fields['Grade'] || '';
                 const name = capitalizeName(data.fields['Name']);
 
-                let status = 'NOT_READY';
-                let score = '';
-                let breakdown = '';
+                const scoreNum = parseScore(grade);
+                const status = parseStatus(grade);
+                const score = scoreNum ? `${scoreNum}/12` : '';
 
-                const scoreMatch = grade.match(/SCORE:\s*(\d+\/12)/);
-                if (scoreMatch) score = scoreMatch[1];
-
-                const statusMatch = grade.match(/STATUS:\s*(READY|ALMOST|NOT_READY)/);
-                if (statusMatch) status = statusMatch[1];
-
-                const breakdownMatch = grade.match(/BREAKDOWN:\s*([\s\S]+?)(?=\nLEARNING_PATH:)/);
-                if (breakdownMatch) breakdown = breakdownMatch[1].trim();
+                const breakdownMatch = grade.match(/BREAKDOWN:\s*([\s\S]+?)(?=\nLEARNING_PATH:|$)/i);
+                const breakdown = breakdownMatch ? breakdownMatch[1].trim() : '';
 
                 const learningPath = parseLearningPath(grade);
 
-                renderResults(status, score, name, breakdown, learningPath);
+                renderResults(status, score, scoreNum, name, breakdown, learningPath);
 
             } catch (err) {
                 content.innerHTML = '<p>Something went wrong. Please try again.</p>';
@@ -250,37 +290,54 @@
             `;
         }
 
-        function renderResults(status, score, name, breakdown, learningPath) {
+        function renderResults(status, score, scoreNum, name, breakdown, learningPath) {
             const content = document.getElementById('content');
+            const num = parseInt(scoreNum) || 0;
 
             if (status === 'READY') {
                 content.innerHTML = `
                     <div class="status-badge badge-ready">READY</div>
                     <div class="header">You're ready, ${name}.</div>
-                    <div class="score">Score: ${score}</div>
+                    <div class="score-display">
+                        <div>
+                            <div class="score-number">${scoreNum}<span class="score-outof">/12</span></div>
+                            <div class="score-label">Skill Check Score</div>
+                        </div>
+                    </div>
                     <div class="breakdown">${breakdown}</div>
                     <div class="main-message">You're ready, and that's not something we say lightly. Your answers show you actually understand this, not just on the surface. Before you go, here are a few resources worth bookmarking. The best hustlers never stop learning even when they're already earning.</div>
-                    ${renderLearningPath(learningPath, 'Keep sharpening.', 'You\'re ready to start. These will make you even better while you do.')}
+                    ${renderLearningPath(learningPath, 'Keep sharpening while you earn.', 'You\'re ready to start. These will make you even better while you do.')}
                     <div class="divider"></div>
                     <a class="btn-primary" href="recommendations.html?id=${recordId}">Show Me My Moves →</a>
+                    <a class="btn-secondary" href="#resources" onclick="document.querySelector('.resources-section').scrollIntoView({behavior:'smooth'}); return false;">Take me to the learning resources first</a>
                 `;
             } else if (status === 'ALMOST') {
                 content.innerHTML = `
                     <div class="status-badge badge-almost">ALMOST THERE</div>
                     <div class="header">You're close, ${name}.</div>
-                    <div class="score">Score: ${score}</div>
+                    <div class="score-display">
+                        <div>
+                            <div class="score-number">${scoreNum}<span class="score-outof">/12</span></div>
+                            <div class="score-label">Skill Check Score</div>
+                        </div>
+                    </div>
                     <div class="breakdown">${breakdown}</div>
                     <div class="main-message">You're closer than you think, but close isn't ready yet. There are a couple of gaps in your understanding that your first client will notice before you do. That's not a knock, it's just honest. One focused week with the right resources and you'll be in a completely different place. The teens who take this week seriously land clients faster, charge more, and don't have to deal with the confidence hit that comes from delivering work they weren't quite ready for.</div>
                     ${renderLearningPath(learningPath, 'One week here changes everything.', 'All free. Follow this plan and you\'ll feel the difference by day 7.')}
                     <div class="divider"></div>
                     <a class="btn-primary" href="recommendations.html?id=${recordId}">I'm ready, show me my moves →</a>
-                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip and continue anyway</a>
+                    <a class="btn-secondary" href="recommendations.html?id=${recordId}">Skip the resources and continue</a>
                 `;
             } else {
                 content.innerHTML = `
                     <div class="status-badge badge-not-ready">NOT YET</div>
                     <div class="header">Not quite yet, ${name}.</div>
-                    <div class="score">Score: ${score}</div>
+                    <div class="score-display">
+                        <div>
+                            <div class="score-number">${scoreNum || '?'}<span class="score-outof">/12</span></div>
+                            <div class="score-label">Skill Check Score</div>
+                        </div>
+                    </div>
                     <div class="breakdown">${breakdown}</div>
                     <div class="main-message">We're not going to sugarcoat this. The skill isn't there yet, and that's completely okay because everyone starts here. But going out and trying to charge for something you haven't fully built yet doesn't just waste your time, it damages your reputation before it's even started. The good news is the gap is completely closeable. Two to four focused weeks with the right resources and you'll come back a different person. We'll still be here when you're ready, and you will be ready.</div>
                     ${renderLearningPath(learningPath, 'Your path forward.', 'Follow this plan. Come back when you\'ve done it. You\'ll be a different person.')}
