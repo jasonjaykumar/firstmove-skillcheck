@@ -24,6 +24,23 @@
             letter-spacing: 2px;
             margin-bottom: 48px;
         }
+        .quote-block {
+            padding: 24px;
+            border-left: 3px solid #0A0A0A;
+            margin-bottom: 48px;
+        }
+        .quote-text {
+            font-size: 15px;
+            font-style: italic;
+            color: #4A4A4A;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        .quote-author {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6B6B6B;
+        }
         .header {
             font-size: 36px;
             font-weight: 800;
@@ -39,20 +56,17 @@
         .hustle-card {
             border: 1.5px solid #C8C6C0;
             border-radius: 20px;
-            padding: 28px;
             margin-bottom: 16px;
-            cursor: pointer;
+            overflow: hidden;
             transition: all 0.2s ease;
             position: relative;
         }
-        .hustle-card:hover {
-            border-color: #0A0A0A;
-            background: #0A0A0A05;
+        .hustle-card.revealed {
+            border-color: #C8C6C0;
         }
         .hustle-card.selected {
             border-color: #0A0A0A;
             border-width: 2px;
-            background: #0A0A0A08;
         }
         .hustle-card.selected::after {
             content: '✓';
@@ -69,6 +83,55 @@
             justify-content: center;
             font-size: 14px;
             font-weight: 700;
+            z-index: 2;
+        }
+        .card-locked {
+            background: #0A0A0A;
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            gap: 16px;
+        }
+        .card-locked-label {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #6B6B6B;
+        }
+        .reveal-btn {
+            padding: 12px 28px;
+            background: #E8E6E0;
+            color: #0A0A0A;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .reveal-btn:hover { opacity: 0.85; }
+        .reveal-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .card-content {
+            padding: 28px;
+            display: none;
+            cursor: pointer;
+        }
+        .card-content.visible {
+            display: block;
+        }
+        .hustle-number {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #6B6B6B;
+            margin-bottom: 8px;
         }
         .hustle-name {
             font-size: 20px;
@@ -124,7 +187,9 @@
             color: #6B6B6B;
             text-align: center;
             margin-bottom: 24px;
+            display: none;
         }
+        .select-hint.visible { display: block; }
         .btn-primary {
             display: block;
             width: 100%;
@@ -141,7 +206,9 @@
             text-decoration: none;
             margin-bottom: 16px;
             transition: opacity 0.2s ease;
+            display: none;
         }
+        .btn-primary.visible { display: block; }
         .btn-primary:hover { opacity: 0.85; }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .loading {
@@ -164,11 +231,15 @@
             color: #6B6B6B;
             line-height: 1.6;
         }
-        .divider {
-            height: 1px;
-            background: #C8C6C0;
-            margin: 40px 0;
+        .selected-indicator {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #0A0A0A;
+            margin-top: 12px;
+            display: none;
         }
+        .selected-indicator.visible { display: block; }
     </style>
 </head>
 <body>
@@ -185,6 +256,7 @@
 
         let selectedHustle = null;
         let hustles = [];
+        let revealedCount = 0;
 
         function capitalizeName(name) {
             if (!name) return 'there';
@@ -306,51 +378,33 @@
             return hustleList.filter(h => h.name && h.why);
         }
 
-        function renderRecommendations(raw, name) {
-            hustles = parseHustles(raw);
-            const content = document.getElementById('content');
+        function revealCard(index) {
+            const lockedDiv = document.getElementById(`locked-${index}`);
+            const contentDiv = document.getElementById(`content-${index}`);
 
-            content.innerHTML = `
-                <div class="header">Your moves, ${name}.</div>
-                <div class="subline">We built these around you specifically. Pick the one that feels right — you can always come back for the others.</div>
-                <div id="hustleCards"></div>
-                <div class="select-hint">Tap a hustle to select it</div>
-                <button class="btn-primary" id="continueBtn" disabled onclick="continueToNiche()">Lock In This Move →</button>
-            `;
+            lockedDiv.style.display = 'none';
+            contentDiv.classList.add('visible');
+            document.getElementById(`card-${index}`).classList.add('revealed');
 
-            const cards = document.getElementById('hustleCards');
-            hustles.forEach((hustle, index) => {
-                const card = document.createElement('div');
-                card.className = 'hustle-card';
-                card.onclick = () => selectHustle(index);
-                card.id = `hustle-${index}`;
-                card.innerHTML = `
-                    <div class="hustle-name">${hustle.name}</div>
-                    ${hustle.meta ? `<div class="hustle-meta">${hustle.meta}</div>` : ''}
-                    ${hustle.market ? `<div class="hustle-market">Best market: ${hustle.market}</div>` : ''}
-                    <div class="hustle-why">${hustle.why}</div>
-                    ${hustle.clients.length ? `
-                        <div class="hustle-section-title">HOW TO FIND YOUR FIRST CLIENT</div>
-                        <ul class="hustle-list">
-                            ${hustle.clients.map(c => `<li>${c}</li>`).join('')}
-                        </ul>
-                    ` : ''}
-                    ${hustle.moves.length ? `
-                        <div class="hustle-section-title">YOUR FIRST THREE MOVES</div>
-                        <ul class="hustle-list">
-                            ${hustle.moves.map(m => `<li>${m}</li>`).join('')}
-                        </ul>
-                    ` : ''}
-                `;
-                cards.appendChild(card);
-            });
+            revealedCount++;
+
+            if (index + 1 < hustles.length) {
+                const nextBtn = document.getElementById(`reveal-btn-${index + 1}`);
+                if (nextBtn) nextBtn.disabled = false;
+            }
+
+            if (revealedCount === hustles.length) {
+                document.getElementById('select-hint').classList.add('visible');
+                document.getElementById('continue-btn').classList.add('visible');
+            }
         }
 
         function selectHustle(index) {
+            if (!document.getElementById(`content-${index}`).classList.contains('visible')) return;
             document.querySelectorAll('.hustle-card').forEach(c => c.classList.remove('selected'));
-            document.getElementById(`hustle-${index}`).classList.add('selected');
+            document.getElementById(`card-${index}`).classList.add('selected');
             selectedHustle = index;
-            document.getElementById('continueBtn').disabled = false;
+            document.getElementById('continue-btn').disabled = false;
         }
 
         function continueToNiche() {
@@ -358,6 +412,62 @@
             const hustle = hustles[selectedHustle];
             const hustleName = encodeURIComponent(hustle.name);
             window.location.href = `niche.html?id=${recordId}&hustle=${hustleName}`;
+        }
+
+        function renderRecommendations(raw, name) {
+            hustles = parseHustles(raw);
+            const content = document.getElementById('content');
+
+            content.innerHTML = `
+                <div class="quote-block">
+                    <div class="quote-text">"If you do not give 110% in your life, I promise your life will haunt you for the rest of your days. Time is the most valuable asset on earth, a depreciating asset. Don't waste another moment of life where you are not at your fullest potential getting the most out of the time you have in life."</div>
+                    <div class="quote-author">— Greg Plitt</div>
+                </div>
+                <div class="header">Your moves, ${name}.</div>
+                <div class="subline">We built these around you specifically. Reveal each one, read it properly, then pick the one you're going to commit to.</div>
+                <div id="hustleCards"></div>
+                <div class="select-hint" id="select-hint">All moves revealed. Tap one to select it.</div>
+                <button class="btn-primary" id="continue-btn" disabled onclick="continueToNiche()">Lock In This Move →</button>
+            `;
+
+            const cards = document.getElementById('hustleCards');
+            hustles.forEach((hustle, index) => {
+                const card = document.createElement('div');
+                card.className = 'hustle-card';
+                card.id = `card-${index}`;
+                card.onclick = () => selectHustle(index);
+
+                card.innerHTML = `
+                    <div class="card-locked" id="locked-${index}">
+                        <div class="card-locked-label">MOVE ${index + 1}</div>
+                        <button class="reveal-btn" id="reveal-btn-${index}" 
+                            ${index === 0 ? '' : 'disabled'}
+                            onclick="event.stopPropagation(); revealCard(${index})">
+                            Reveal Move ${index + 1}
+                        </button>
+                    </div>
+                    <div class="card-content" id="content-${index}">
+                        <div class="hustle-number">MOVE ${index + 1}</div>
+                        <div class="hustle-name">${hustle.name}</div>
+                        ${hustle.meta ? `<div class="hustle-meta">${hustle.meta}</div>` : ''}
+                        ${hustle.market ? `<div class="hustle-market">Best market: ${hustle.market}</div>` : ''}
+                        <div class="hustle-why">${hustle.why}</div>
+                        ${hustle.clients.length ? `
+                            <div class="hustle-section-title">HOW TO FIND YOUR FIRST CLIENT</div>
+                            <ul class="hustle-list">
+                                ${hustle.clients.map(c => `<li>${c}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        ${hustle.moves.length ? `
+                            <div class="hustle-section-title">YOUR FIRST THREE MOVES</div>
+                            <ul class="hustle-list">
+                                ${hustle.moves.map(m => `<li>${m}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                    </div>
+                `;
+                cards.appendChild(card);
+            });
         }
 
         loadRecommendations();
