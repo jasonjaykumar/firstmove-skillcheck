@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Niche — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 8px;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #C8C6C0;
+            padding: 8px 4px;
+            border-bottom: 2px solid #C8C6C0;
+            transition: all 0.2s ease;
+        }
+        .progress-step.active {
+            color: #0A0A0A;
+            border-bottom: 2px solid #0A0A0A;
+        }
+        .progress-step.done {
+            color: #6B6B6B;
+            border-bottom: 2px solid #6B6B6B;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+        }
+        .hustle-context {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 8px;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .subline {
+            font-size: 16px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+        .niche-card {
+            border: 1.5px solid #C8C6C0;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .niche-card:hover {
+            border-color: #0A0A0A;
+            background: #0A0A0A05;
+        }
+        .niche-card.selected {
+            border-color: #0A0A0A;
+            border-width: 2px;
+            background: #0A0A0A08;
+        }
+        .niche-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 28px;
+            height: 28px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .niche-name {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            padding-right: 40px;
+        }
+        .niche-section {
+            margin-bottom: 14px;
+        }
+        .niche-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 4px;
+        }
+        .niche-section-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #0A0A0A;
+        }
+        .niche-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .niche-meta-item {
+            font-size: 12px;
+            color: #4A4A4A;
+            font-weight: 500;
+        }
+        .niche-meta-item span {
+            font-weight: 700;
+            color: #0A0A0A;
+        }
+        .niche-why-now {
+            font-size: 13px;
+            font-style: italic;
+            color: #6B6B6B;
+            margin-top: 12px;
+            line-height: 1.6;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 12px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .next-up {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .generating {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .generating-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .generating-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+        }
+        .select-hint {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div class="progress-bar">
+            <div class="progress-step done">HUSTLE</div>
+            <div class="progress-step active">NICHE</div>
+            <div class="progress-step">TOOLS</div>
+            <div class="progress-step">CLIENT</div>
+            <div class="progress-step">MISSION</div>
+        </div>
+        <div class="progress-label">Step 2 of 5 — Pick the exact corner of the market you're going to own.</div>
+        <div id="content"><div class="loading">Loading your niches...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/om2x5cb1yowwl2nxj4za9cjelehztt5u';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+        const hustle = decodeURIComponent(urlParams.get('hustle') || '');
+
+        let selectedNiche = null;
+        let niches = [];
+
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        async function loadNiches() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const fields = data.fields;
+                const name = capitalizeName(fields['Name']);
+
+                if (fields['Niche Options']) {
+                    renderNiches(fields['Niche Options'], name);
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="generating">
+                        <div class="generating-title">Finding your niche, ${name}.</div>
+                        <div class="generating-sub">We're mapping out the best corners of the market for your ${hustle} hustle. This takes about 20 seconds.</div>
+                    </div>
+                `;
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        name: fields['Name'],
+                        age: fields['Age'],
+                        city: fields['City'],
+                        skillArea: fields['Skills Multi'],
+                        enjoysDoing: fields['Enjoys doing'],
+                        hustle
+                    })
+                });
+
+                setTimeout(() => pollForNiches(name), 5000);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        async function pollForNiches(name, attempts = 0) {
+            if (attempts > 10) {
+                document.getElementById('content').innerHTML = '<p>This is taking longer than expected. Please refresh the page.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+
+                if (data.fields['Niche Options']) {
+                    renderNiches(data.fields['Niche Options'], name);
+                } else {
+                    setTimeout(() => pollForNiches(name, attempts + 1), 3000);
+                }
+            } catch (err) {
+                setTimeout(() => pollForNiches(name, attempts + 1), 3000);
+            }
+        }
+
+        function parseNiches(raw) {
+            const lines = raw.split('\n');
+            const nicheList = [];
+            let current = null;
+            let section = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line === '---') {
+                    if (current && current.name) {
+                        nicheList.push(current);
+                        current = null;
+                        section = null;
+                    }
+                    return;
+                }
+
+                if (line.startsWith('Why it fits you:')) {
+                    section = 'fits';
+                    if (current) current.fits = line.replace('Why it fits you:', '').trim();
+                } else if (line.startsWith('Why India needs it:')) {
+                    section = 'india';
+                    if (current) current.india = line.replace('Why India needs it:', '').trim();
+                } else if (line.startsWith('Avg first client budget:')) {
+                    if (current) current.budget = line.replace('Avg first client budget:', '').trim();
+                    section = null;
+                } else if (line.startsWith('Demand level:')) {
+                    if (current) current.demand = line.replace('Demand level:', '').trim();
+                    section = null;
+                } else if (line.startsWith('Why now:')) {
+                    if (current) current.whyNow = line.replace('Why now:', '').trim();
+                    section = null;
+                } else if (section === 'fits' && current) {
+                    current.fits += ' ' + line;
+                } else if (section === 'india' && current) {
+                    current.india += ' ' + line;
+                } else if (!current) {
+                    current = { name: line, fits: '', india: '', budget: '', demand: '', whyNow: '' };
+                    section = null;
+                }
+            });
+
+            if (current && current.name) nicheList.push(current);
+            return nicheList.filter(n => n.name && n.fits);
+        }
+
+        function renderNiches(raw, name) {
+            niches = parseNiches(raw);
+            const content = document.getElementById('content');
+
+            content.innerHTML = `
+                <div class="hustle-context">YOUR HUSTLE: ${hustle.toUpperCase()}</div>
+                <div class="header">Pick your niche, ${name}.</div>
+                <div class="subline">Your niche is the specific corner of the market you're going to own. The more specific you go, the easier it is to find clients and stand out.</div>
+                <div class="select-hint">Tap a niche to select it</div>
+                <div id="nicheCards"></div>
+                <button class="btn-primary" id="continueBtn" disabled onclick="continueToTools()">Own This Niche →</button>
+                <div class="next-up">Next: Pick your tools → Then your first client → Then your mission</div>
+            `;
+
+            const cards = document.getElementById('nicheCards');
+            niches.forEach((niche, index) => {
+                const card = document.createElement('div');
+                card.className = 'niche-card';
+                card.onclick = () => selectNiche(index);
+                card.id = `niche-${index}`;
+                card.innerHTML = `
+                    <div class="niche-name">${niche.name}</div>
+                    ${niche.fits ? `
+                        <div class="niche-section">
+                            <div class="niche-section-label">WHY IT FITS YOU</div>
+                            <div class="niche-section-text">${niche.fits}</div>
+                        </div>
+                    ` : ''}
+                    ${niche.india ? `
+                        <div class="niche-section">
+                            <div class="niche-section-label">WHY INDIA NEEDS IT</div>
+                            <div class="niche-section-text">${niche.india}</div>
+                        </div>
+                    ` : ''}
+                    <div class="niche-meta">
+                        ${niche.budget ? `<div class="niche-meta-item">Budget: <span>${niche.budget}</span></div>` : ''}
+                        ${niche.demand ? `<div class="niche-meta-item">Demand: <span>${niche.demand}</span></div>` : ''}
+                    </div>
+                    ${niche.whyNow ? `<div class="niche-why-now">"${niche.whyNow}"</div>` : ''}
+                `;
+                cards.appendChild(card);
+            });
+        }
+
+        function selectNiche(index) {
+            document.querySelectorAll('.niche-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`niche-${index}`).classList.add('selected');
+            selectedNiche = index;
+            document.getElementById('continueBtn').disabled = false;
+        }
+
+        function continueToTools() {
+            if (selectedNiche === null) return;
+            const niche = niches[selectedNiche];
+            const nicheName = encodeURIComponent(niche.name);
+            window.location.href = `tools.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${nicheName}`;
+        }
+
+        loadNiches();
+    </script>
+</body>
+</html>
