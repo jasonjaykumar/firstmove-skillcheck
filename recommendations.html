@@ -22,6 +22,36 @@
             font-size: 16px;
             font-weight: 700;
             letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 8px;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #C8C6C0;
+            padding: 8px 4px;
+            border-bottom: 2px solid #C8C6C0;
+            transition: all 0.2s ease;
+        }
+        .progress-step.active {
+            color: #0A0A0A;
+            border-bottom: 2px solid #0A0A0A;
+        }
+        .progress-step.done {
+            color: #6B6B6B;
+            border-bottom: 2px solid #6B6B6B;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #6B6B6B;
             margin-bottom: 48px;
         }
         .quote-block {
@@ -61,9 +91,7 @@
             transition: all 0.2s ease;
             position: relative;
         }
-        .hustle-card.revealed {
-            border-color: #C8C6C0;
-        }
+        .hustle-card.revealed { border-color: #C8C6C0; }
         .hustle-card.selected {
             border-color: #0A0A0A;
             border-width: 2px;
@@ -123,9 +151,7 @@
             display: none;
             cursor: pointer;
         }
-        .card-content.visible {
-            display: block;
-        }
+        .card-content.visible { display: block; }
         .hustle-number {
             font-size: 11px;
             font-weight: 700;
@@ -191,7 +217,7 @@
         }
         .select-hint.visible { display: block; }
         .btn-primary {
-            display: block;
+            display: none;
             width: 100%;
             padding: 18px;
             background: #0A0A0A;
@@ -206,7 +232,6 @@
             text-decoration: none;
             margin-bottom: 16px;
             transition: opacity 0.2s ease;
-            display: none;
         }
         .btn-primary.visible { display: block; }
         .btn-primary:hover { opacity: 0.85; }
@@ -231,20 +256,25 @@
             color: #6B6B6B;
             line-height: 1.6;
         }
-        .selected-indicator {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: #0A0A0A;
+        .next-up {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
             margin-top: 12px;
-            display: none;
         }
-        .selected-indicator.visible { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="logo">FIRST MOVE</div>
+        <div class="progress-bar">
+            <div class="progress-step active">HUSTLE</div>
+            <div class="progress-step">NICHE</div>
+            <div class="progress-step">TOOLS</div>
+            <div class="progress-step">CLIENT</div>
+            <div class="progress-step">MISSION</div>
+        </div>
+        <div class="progress-label">Step 1 of 5 — Pick the hustle you're going to own.</div>
         <div id="content"><div class="loading">Loading your moves...</div></div>
     </div>
 
@@ -404,7 +434,6 @@
             document.querySelectorAll('.hustle-card').forEach(c => c.classList.remove('selected'));
             document.getElementById(`card-${index}`).classList.add('selected');
             selectedHustle = index;
-            document.getElementById('continue-btn').disabled = false;
         }
 
         function continueToNiche() {
@@ -424,10 +453,11 @@
                     <div class="quote-author">— Greg Plitt</div>
                 </div>
                 <div class="header">Your moves, ${name}.</div>
-                <div class="subline">We built these around you specifically. Reveal each one, read it properly, then pick the one you're going to commit to.</div>
+                <div class="subline">We built these around you specifically. Reveal each one, read it properly, then pick the one you're going to commit to. Next up you'll narrow down your exact niche.</div>
                 <div id="hustleCards"></div>
                 <div class="select-hint" id="select-hint">All moves revealed. Tap one to select it.</div>
                 <button class="btn-primary" id="continue-btn" disabled onclick="continueToNiche()">Lock In This Move →</button>
+                <div class="next-up">Next: Pick your niche → Then tools → Then your first client</div>
             `;
 
             const cards = document.getElementById('hustleCards');
@@ -440,7 +470,7 @@
                 card.innerHTML = `
                     <div class="card-locked" id="locked-${index}">
                         <div class="card-locked-label">MOVE ${index + 1}</div>
-                        <button class="reveal-btn" id="reveal-btn-${index}" 
+                        <button class="reveal-btn" id="reveal-btn-${index}"
                             ${index === 0 ? '' : 'disabled'}
                             onclick="event.stopPropagation(); revealCard(${index})">
                             Reveal Move ${index + 1}
