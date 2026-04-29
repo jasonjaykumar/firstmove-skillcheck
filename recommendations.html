@@ -205,8 +205,8 @@
                 const fields = data.fields;
                 const name = capitalizeName(fields['Name']);
 
-                if (fields['Hustle recommendations']) {
-                    renderRecommendations(fields['Hustle recommendations'], name);
+                if (fields['Hustle recommendations ']) {
+                    renderRecommendations(fields['Hustle recommendations '], name);
                     return;
                 }
 
@@ -255,8 +255,8 @@
                 const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
                 const data = await response.json();
 
-                if (data.fields['Hustle recommendations']) {
-                    renderRecommendations(data.fields['Hustle recommendations'], name);
+                if (data.fields['Hustle recommendations ']) {
+                    renderRecommendations(data.fields['Hustle recommendations '], name);
                 } else {
                     setTimeout(() => pollForRecommendations(name, attempts + 1), 3000);
                 }
