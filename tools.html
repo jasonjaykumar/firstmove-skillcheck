@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Tools — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 8px;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #C8C6C0;
+            padding: 8px 4px;
+            border-bottom: 2px solid #C8C6C0;
+            transition: all 0.2s ease;
+        }
+        .progress-step.active {
+            color: #0A0A0A;
+            border-bottom: 2px solid #0A0A0A;
+        }
+        .progress-step.done {
+            color: #6B6B6B;
+            border-bottom: 2px solid #6B6B6B;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+        }
+        .context-block {
+            margin-bottom: 32px;
+        }
+        .context-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 4px;
+        }
+        .context-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0A0A0A;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .subline {
+            font-size: 16px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+        .tool-card {
+            border: 1.5px solid #C8C6C0;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+        .tool-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+        .tool-section {
+            margin-bottom: 14px;
+        }
+        .tool-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 4px;
+        }
+        .tool-section-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #0A0A0A;
+        }
+        .tool-best-for {
+            display: inline-block;
+            padding: 6px 14px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .tool-proof {
+            font-size: 13px;
+            font-style: italic;
+            color: #6B6B6B;
+            line-height: 1.6;
+            padding: 12px 16px;
+            border-left: 2px solid #C8C6C0;
+            margin-top: 4px;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 12px;
+            margin-top: 32px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .next-up {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .generating {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .generating-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .generating-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div class="progress-bar">
+            <div class="progress-step done">HUSTLE</div>
+            <div class="progress-step done">NICHE</div>
+            <div class="progress-step active">TOOLS</div>
+            <div class="progress-step">CLIENT</div>
+            <div class="progress-step">MISSION</div>
+        </div>
+        <div class="progress-label">Step 3 of 5 — Your arsenal. These are the tools that will do the heavy lifting.</div>
+        <div id="content"><div class="loading">Loading your tools...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/c3xzqc6pfes1aqyigkdntp8m55i44217';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+        const hustle = decodeURIComponent(urlParams.get('hustle') || '');
+        const niche = decodeURIComponent(urlParams.get('niche') || '');
+
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        async function loadTools() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const fields = data.fields;
+                const name = capitalizeName(fields['Name']);
+
+                if (fields['Tool Suggestions']) {
+                    renderTools(fields['Tool Suggestions'], name);
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="generating">
+                        <div class="generating-title">Building your toolkit, ${name}.</div>
+                        <div class="generating-sub">Finding the best free tools for your ${niche} hustle. This takes about 20 seconds.</div>
+                    </div>
+                `;
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        name: fields['Name'],
+                        age: fields['Age'],
+                        city: fields['City'],
+                        skillArea: fields['Skills Multi'],
+                        hustle,
+                        niche
+                    })
+                });
+
+                setTimeout(() => pollForTools(name), 5000);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        async function pollForTools(name, attempts = 0) {
+            if (attempts > 10) {
+                document.getElementById('content').innerHTML = '<p>This is taking longer than expected. Please refresh the page.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+
+                if (data.fields['Tool Suggestions']) {
+                    renderTools(data.fields['Tool Suggestions'], name);
+                } else {
+                    setTimeout(() => pollForTools(name, attempts + 1), 3000);
+                }
+            } catch (err) {
+                setTimeout(() => pollForTools(name, attempts + 1), 3000);
+            }
+        }
+
+        function parseTools(raw) {
+            const lines = raw.split('\n');
+            const toolList = [];
+            let current = null;
+            let section = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line === '---') {
+                    if (current && current.name) {
+                        toolList.push(current);
+                        current = null;
+                        section = null;
+                    }
+                    return;
+                }
+
+                if (line.startsWith('What it does:')) {
+                    section = 'what';
+                    if (current) current.what = line.replace('What it does:', '').trim();
+                } else if (line.startsWith('Best for:')) {
+                    section = 'best';
+                    if (current) current.best = line.replace('Best for:', '').trim();
+                } else if (line.startsWith('Proof it works:')) {
+                    section = 'proof';
+                    if (current) current.proof = line.replace('Proof it works:', '').trim();
+                } else if (section === 'what' && current) {
+                    current.what += ' ' + line;
+                } else if (section === 'proof' && current) {
+                    current.proof += ' ' + line;
+                } else if (!current) {
+                    current = { name: line, what: '', best: '', proof: '' };
+                    section = null;
+                }
+            });
+
+            if (current && current.name) toolList.push(current);
+            return toolList.filter(t => t.name && t.what);
+        }
+
+        function renderTools(raw, name) {
+            const tools = parseTools(raw);
+            const content = document.getElementById('content');
+
+            content.innerHTML = `
+                <div class="context-block">
+                    <div class="context-label">YOUR HUSTLE</div>
+                    <div class="context-value">${hustle}</div>
+                </div>
+                <div class="context-block">
+                    <div class="context-label">YOUR NICHE</div>
+                    <div class="context-value">${niche}</div>
+                </div>
+                <div class="header">Your toolkit, ${name}.</div>
+                <div class="subline">These are all free. Master these and you'll have everything you need to start and scale.</div>
+                <div id="toolCards"></div>
+                <a class="btn-primary" href="client.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}">Find My First Client →</a>
+                <div class="next-up">Next: Your ideal first client → Then your full mission</div>
+            `;
+
+            const cards = document.getElementById('toolCards');
+            tools.forEach((tool, index) => {
+                const card = document.createElement('div');
+                card.className = 'tool-card';
+                card.innerHTML = `
+                    <div class="tool-name">${tool.name}</div>
+                    ${tool.what ? `
+                        <div class="tool-section">
+                            <div class="tool-section-label">WHAT IT DOES</div>
+                            <div class="tool-section-text">${tool.what}</div>
+                        </div>
+                    ` : ''}
+                    ${tool.best ? `<div class="tool-best-for">Best for: ${tool.best}</div>` : ''}
+                    ${tool.proof ? `<div class="tool-proof">${tool.proof}</div>` : ''}
+                `;
+                cards.appendChild(card);
+            });
+        }
+
+        loadTools();
+    </script>
+</body>
+</html>
