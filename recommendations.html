@@ -429,12 +429,17 @@
             }
         }
 
-        function selectHustle(index) {
-            if (!document.getElementById(`content-${index}`).classList.contains('visible')) return;
-            document.querySelectorAll('.hustle-card').forEach(c => c.classList.remove('selected'));
-            document.getElementById(`card-${index}`).classList.add('selected');
-            selectedHustle = index;
-        }
+       function selectHustle(index) {
+    if (!document.getElementById(`content-${index}`).classList.contains('visible')) return;
+    document.querySelectorAll('.hustle-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById(`card-${index}`).classList.add('selected');
+    selectedHustle = index;
+    const btn = document.getElementById('continue-btn');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.add('visible');
+    }
+}
 
         function continueToNiche() {
             if (selectedHustle === null) return;
