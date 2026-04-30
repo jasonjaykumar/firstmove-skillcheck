@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your First Client — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 8px;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #C8C6C0;
+            padding: 8px 4px;
+            border-bottom: 2px solid #C8C6C0;
+            transition: all 0.2s ease;
+        }
+        .progress-step.active {
+            color: #0A0A0A;
+            border-bottom: 2px solid #0A0A0A;
+        }
+        .progress-step.done {
+            color: #6B6B6B;
+            border-bottom: 2px solid #6B6B6B;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+        }
+        .context-block {
+            margin-bottom: 16px;
+        }
+        .context-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 4px;
+        }
+        .context-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0A0A0A;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            line-height: 1.2;
+            margin-top: 32px;
+        }
+        .subline {
+            font-size: 16px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+        .section-card {
+            border: 1.5px solid #C8C6C0;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 12px;
+        }
+        .section-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #0A0A0A;
+        }
+        .list-items {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .list-items li {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #0A0A0A;
+            padding-left: 20px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .list-items li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #0A0A0A;
+            font-weight: 700;
+        }
+        .red-flag li::before {
+            content: '✕';
+            color: #6B6B6B;
+        }
+        .pricing-block {
+            background: #0A0A0A;
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+        .pricing-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 12px;
+        }
+        .pricing-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #E8E6E0;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 12px;
+            margin-top: 32px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .next-up {
+            font-size: 13px;
+            color: #6B6B6B;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .generating {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .generating-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .generating-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div class="progress-bar">
+            <div class="progress-step done">HUSTLE</div>
+            <div class="progress-step done">NICHE</div>
+            <div class="progress-step done">TOOLS</div>
+            <div class="progress-step active">CLIENT</div>
+            <div class="progress-step">MISSION</div>
+        </div>
+        <div class="progress-label">Step 4 of 5 — Know exactly who you're going after and how to get them.</div>
+        <div id="content"><div class="loading">Loading your client profile...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/f4hf7pncm2vj8rx73ky5o9o52eql14sx';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+        const hustle = decodeURIComponent(urlParams.get('hustle') || '');
+        const niche = decodeURIComponent(urlParams.get('niche') || '');
+
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        async function loadClient() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const fields = data.fields;
+                const name = capitalizeName(fields['Name']);
+
+                if (fields['Client Profile']) {
+                    renderClient(fields['Client Profile'], name);
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="generating">
+                        <div class="generating-title">Finding your first client, ${name}.</div>
+                        <div class="generating-sub">Building a detailed profile of exactly who to go after first. This takes about 20 seconds.</div>
+                    </div>
+                `;
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        name: fields['Name'],
+                        age: fields['Age'],
+                        city: fields['City'],
+                        skillArea: fields['Skills Multi'],
+                        hustle,
+                        niche
+                    })
+                });
+
+                setTimeout(() => pollForClient(name), 5000);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        async function pollForClient(name, attempts = 0) {
+            if (attempts > 10) {
+                document.getElementById('content').innerHTML = '<p>This is taking longer than expected. Please refresh the page.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+
+                if (data.fields['Client Profile']) {
+                    renderClient(data.fields['Client Profile'], name);
+                } else {
+                    setTimeout(() => pollForClient(name, attempts + 1), 3000);
+                }
+            } catch (err) {
+                setTimeout(() => pollForClient(name, attempts + 1), 3000);
+            }
+        }
+
+        function parseClient(raw) {
+            const sections = {};
+            const sectionNames = [
+                'Who they are',
+                'Where to find them',
+                'Signs they need you',
+                'Signs to stay away from',
+                'How to approach them',
+                'What to charge'
+            ];
+
+            sectionNames.forEach(name => {
+                const regex = new RegExp(`${name}:\\s*([\\s\\S]+?)(?=${sectionNames.filter(n => n !== name).map(n => `${n}:`).join('|')}|$)`, 'i');
+                const match = raw.match(regex);
+                if (match) sections[name] = match[1].trim();
+            });
+
+            return sections;
+        }
+
+        function renderList(text, extraClass = '') {
+            if (!text) return '';
+            const lines = text.split('\n').filter(l => l.trim());
+            return `<ul class="list-items ${extraClass}">
+                ${lines.map(l => `<li>${l.replace(/^[\d\.\-\*]\s*/, '')}</li>`).join('')}
+            </ul>`;
+        }
+
+        function renderClient(raw, name) {
+            const sections = parseClient(raw);
+            const content = document.getElementById('content');
+
+            content.innerHTML = `
+                <div class="context-block">
+                    <div class="context-label">YOUR HUSTLE</div>
+                    <div class="context-value">${hustle}</div>
+                </div>
+                <div class="context-block">
+                    <div class="context-label">YOUR NICHE</div>
+                    <div class="context-value">${niche}</div>
+                </div>
+                <div class="header">Your first client, ${name}.</div>
+                <div class="subline">This is exactly who you're going after. Study this profile before you send your first message.</div>
+
+                ${sections['Who they are'] ? `
+                    <div class="section-card">
+                        <div class="section-title">WHO THEY ARE</div>
+                        <div class="section-text">${sections['Who they are']}</div>
+                    </div>
+                ` : ''}
+
+                ${sections['Where to find them'] ? `
+                    <div class="section-card">
+                        <div class="section-title">WHERE TO FIND THEM</div>
+                        ${renderList(sections['Where to find them'])}
+                    </div>
+                ` : ''}
+
+                ${sections['Signs they need you'] ? `
+                    <div class="section-card">
+                        <div class="section-title">SIGNS THEY NEED YOU</div>
+                        ${renderList(sections['Signs they need you'])}
+                    </div>
+                ` : ''}
+
+                ${sections['Signs to stay away from'] ? `
+                    <div class="section-card">
+                        <div class="section-title">RED FLAGS — STAY AWAY</div>
+                        ${renderList(sections['Signs to stay away from'], 'red-flag')}
+                    </div>
+                ` : ''}
+
+                ${sections['How to approach them'] ? `
+                    <div class="section-card">
+                        <div class="section-title">HOW TO APPROACH THEM</div>
+                        <div class="section-text">${sections['How to approach them']}</div>
+                    </div>
+                ` : ''}
+
+                ${sections['What to charge'] ? `
+                    <div class="pricing-block">
+                        <div class="pricing-title">WHAT TO CHARGE</div>
+                        <div class="pricing-text">${sections['What to charge']}</div>
+                    </div>
+                ` : ''}
+
+                <a class="btn-primary" href="mission.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}">Get My Full Mission →</a>
+                <div class="next-up">Last step — your complete action plan</div>
+            `;
+        }
+
+        loadClient();
+    </script>
+</body>
+</html>
