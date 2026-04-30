@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Mission — First Move</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #E8E6E0;
+            font-family: 'Inter', sans-serif;
+            color: #0A0A0A;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 8px;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #C8C6C0;
+            padding: 8px 4px;
+            border-bottom: 2px solid #C8C6C0;
+            transition: all 0.2s ease;
+        }
+        .progress-step.active {
+            color: #0A0A0A;
+            border-bottom: 2px solid #0A0A0A;
+        }
+        .progress-step.done {
+            color: #6B6B6B;
+            border-bottom: 2px solid #6B6B6B;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #6B6B6B;
+            margin-bottom: 48px;
+        }
+        .mission-statement {
+            background: #0A0A0A;
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+        .mission-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #6B6B6B;
+            margin-bottom: 12px;
+        }
+        .mission-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: #E8E6E0;
+            line-height: 1.4;
+        }
+        .section-card {
+            border: 1.5px solid #C8C6C0;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 16px;
+        }
+        .day-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: flex-start;
+        }
+        .day-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #6B6B6B;
+            min-width: 40px;
+            padding-top: 2px;
+        }
+        .day-task {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #0A0A0A;
+            flex: 1;
+        }
+        .numbered-list {
+            list-style: none;
+            counter-reset: item;
+        }
+        .numbered-list li {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #0A0A0A;
+            padding-left: 28px;
+            position: relative;
+            margin-bottom: 10px;
+            counter-increment: item;
+        }
+        .numbered-list li::before {
+            content: counter(item);
+            position: absolute;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            top: 2px;
+        }
+        .earnings-card {
+            background: #0A0A0A;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .earnings-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #6B6B6B;
+            margin-bottom: 8px;
+        }
+        .earnings-amount {
+            font-size: 32px;
+            font-weight: 800;
+            color: #E8E6E0;
+            margin-bottom: 12px;
+        }
+        .earnings-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #9B9B9B;
+        }
+        .warning-card {
+            border: 2px solid #0A0A0A;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .warning-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #6B6B6B;
+            margin-bottom: 8px;
+        }
+        .warning-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #0A0A0A;
+            font-weight: 600;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: #0A0A0A;
+            color: #E8E6E0;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 12px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-secondary {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            color: #6B6B6B;
+            border: 1.5px solid #C8C6C0;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover { border-color: #0A0A0A; color: #0A0A0A; }
+        .completion-message {
+            text-align: center;
+            padding: 32px 0 16px;
+        }
+        .completion-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .completion-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .loading {
+            text-align: center;
+            padding: 80px 0;
+            color: #6B6B6B;
+            font-size: 16px;
+        }
+        .generating {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .generating-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .generating-sub {
+            font-size: 15px;
+            color: #6B6B6B;
+            line-height: 1.6;
+        }
+        .divider {
+            height: 1px;
+            background: #C8C6C0;
+            margin: 32px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FIRST MOVE</div>
+        <div class="progress-bar">
+            <div class="progress-step done">HUSTLE</div>
+            <div class="progress-step done">NICHE</div>
+            <div class="progress-step done">TOOLS</div>
+            <div class="progress-step done">CLIENT</div>
+            <div class="progress-step active">MISSION</div>
+        </div>
+        <div class="progress-label">Step 5 of 5 — Your complete action plan. Everything you need to start earning.</div>
+        <div id="content"><div class="loading">Loading your mission...</div></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/19xogi72ha1fv2prg6opabcuj71xydsq';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+        const hustle = decodeURIComponent(urlParams.get('hustle') || '');
+        const niche = decodeURIComponent(urlParams.get('niche') || '');
+
+        function capitalizeName(name) {
+            if (!name) return 'there';
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        async function loadMission() {
+            const content = document.getElementById('content');
+
+            if (!recordId) {
+                content.innerHTML = '<p>No record found. Please use the link sent to your email.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+                const fields = data.fields;
+                const name = capitalizeName(fields['Name']);
+
+                if (fields['Mission Plan']) {
+                    renderMission(fields['Mission Plan'], name);
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="generating">
+                        <div class="generating-title">Building your mission, ${name}.</div>
+                        <div class="generating-sub">Pulling everything together into your complete action plan. This is the last step — make it count. About 30 seconds.</div>
+                    </div>
+                `;
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        name: fields['Name'],
+                        age: fields['Age'],
+                        city: fields['City'],
+                        skillArea: fields['Skills Multi'],
+                        hustle,
+                        niche
+                    })
+                });
+
+                setTimeout(() => pollForMission(name), 5000);
+
+            } catch (err) {
+                content.innerHTML = '<p>Something went wrong. Please try again.</p>';
+            }
+        }
+
+        async function pollForMission(name, attempts = 0) {
+            if (attempts > 10) {
+                document.getElementById('content').innerHTML = '<p>This is taking longer than expected. Please refresh the page.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/?id=${recordId}`);
+                const data = await response.json();
+
+                if (data.fields['Mission Plan']) {
+                    renderMission(data.fields['Mission Plan'], name);
+                } else {
+                    setTimeout(() => pollForMission(name, attempts + 1), 3000);
+                }
+            } catch (err) {
+                setTimeout(() => pollForMission(name, attempts + 1), 3000);
+            }
+        }
+
+        function parseMission(raw) {
+            const sections = {};
+
+            const missionMatch = raw.match(/Your Mission\n([\s\S]+?)(?=\nYour Setup)/i);
+            if (missionMatch) sections.mission = missionMatch[1].trim();
+
+            const setupMatch = raw.match(/Your Setup[^:]*:\n([\s\S]+?)(?=\nYour First Week)/i);
+            if (setupMatch) sections.setup = setupMatch[1].trim();
+
+            const weekMatch = raw.match(/Your First Week:\n([\s\S]+?)(?=\nYour First Client)/i);
+            if (weekMatch) sections.week = weekMatch[1].trim();
+
+            const clientMatch = raw.match(/Your First Client[^:]*:\n([\s\S]+?)(?=\nRealistic First Month)/i);
+            if (clientMatch) sections.client = clientMatch[1].trim();
+
+            const earningsMatch = raw.match(/Realistic First Month[^:]*:\n([\s\S]+?)(?=\nOne Thing)/i);
+            if (earningsMatch) sections.earnings = earningsMatch[1].trim();
+
+            const warningMatch = raw.match(/One Thing Most Teens Get Wrong:\n([\s\S]+?)$/i);
+            if (warningMatch) sections.warning = warningMatch[1].trim();
+
+            return sections;
+        }
+
+        function renderWeek(text) {
+            if (!text) return '';
+            const lines = text.split('\n').filter(l => l.trim());
+            return lines.map(line => {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex === -1) return `<div class="day-row"><div class="day-task">${line}</div></div>`;
+                const label = line.substring(0, colonIndex).trim();
+                const task = line.substring(colonIndex + 1).trim();
+                return `
+                    <div class="day-row">
+                        <div class="day-label">${label}</div>
+                        <div class="day-task">${task}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderNumberedList(text) {
+            if (!text) return '';
+            const lines = text.split('\n').filter(l => l.trim());
+            return `<ol class="numbered-list">
+                ${lines.map(l => `<li>${l.replace(/^\d+\.\s*/, '')}</li>`).join('')}
+            </ol>`;
+        }
+
+        function renderMission(raw, name) {
+            const sections = parseMission(raw);
+            const content = document.getElementById('content');
+
+            const earningsAmount = sections.earnings ? sections.earnings.match(/₹[\d,]+–₹[\d,]+/)?.[0] || '' : '';
+            const earningsText = sections.earnings ? sections.earnings.replace(/₹[\d,]+–₹[\d,]+\s*—?\s*/, '') : '';
+
+            content.innerHTML = `
+                <div class="completion-message">
+                    <div class="completion-title">This is it, ${name}.</div>
+                    <div class="completion-sub">You've got your hustle, your niche, your tools, your client profile, and now your complete mission. Everything you need to start is right here.</div>
+                </div>
+
+                ${sections.mission ? `
+                    <div class="mission-statement">
+                        <div class="mission-label">YOUR MISSION</div>
+                        <div class="mission-text">${sections.mission}</div>
+                    </div>
+                ` : ''}
+
+                ${sections.setup ? `
+                    <div class="section-card">
+                        <div class="section-title">YOUR SETUP — DONE IN ONE DAY</div>
+                        ${renderNumberedList(sections.setup)}
+                    </div>
+                ` : ''}
+
+                ${sections.week ? `
+                    <div class="section-card">
+                        <div class="section-title">YOUR FIRST WEEK</div>
+                        ${renderWeek(sections.week)}
+                    </div>
+                ` : ''}
+
+                ${sections.client ? `
+                    <div class="section-card">
+                        <div class="section-title">YOUR FIRST CLIENT — THIS MONTH</div>
+                        ${renderNumberedList(sections.client)}
+                    </div>
+                ` : ''}
+
+                ${sections.earnings ? `
+                    <div class="earnings-card">
+                        <div class="earnings-label">REALISTIC FIRST MONTH</div>
+                        ${earningsAmount ? `<div class="earnings-amount">${earningsAmount}</div>` : ''}
+                        <div class="earnings-text">${earningsText}</div>
+                    </div>
+                ` : ''}
+
+                ${sections.warning ? `
+                    <div class="warning-card">
+                        <div class="warning-label">ONE THING MOST TEENS GET WRONG</div>
+                        <div class="warning-text">${sections.warning}</div>
+                    </div>
+                ` : ''}
+
+                <div class="divider"></div>
+
+                <a class="btn-primary" href="journey.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}">Start My Journey →</a>
+                <a class="btn-secondary" href="recommendations.html?id=${recordId}">Review my moves</a>
+            `;
+        }
+
+        loadMission();
+    </script>
+</body>
+</html>
