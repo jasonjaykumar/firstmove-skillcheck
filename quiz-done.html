@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Plan Is Being Built</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:rgba(232,230,224,.35);--divider:rgba(232,230,224,.1);}
+html,body{width:100%;min-height:100%;background:var(--black);font-family:'Space Grotesk',sans-serif;cursor:none;overflow-x:hidden;display:flex;align-items:center;justify-content:center;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--cream);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:difference;}
+
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}}
+
+/* MAIN CARD */
+#main-card{
+  position:relative;z-index:1;
+  background:var(--cream);
+  border-radius:24px;
+  padding:48px 48px 40px;
+  width:min(560px, calc(100vw - 48px));
+  opacity:0;transform:translateY(24px) scale(.97);
+  transition:opacity .7s ease .2s, transform .7s cubic-bezier(.22,1,.36,1) .2s;
+}
+#main-card.go{opacity:1;transform:translateY(0) scale(1);}
+
+/* CHECK ICON */
+.check-wrap{
+  width:48px;height:48px;border-radius:50%;
+  background:var(--black);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:28px;
+  opacity:0;transform:scale(.7);
+  transition:opacity .5s ease .5s,transform .5s cubic-bezier(.22,1,.36,1) .5s;
+}
+.check-wrap.go{opacity:1;transform:scale(1);}
+.check-icon{color:var(--cream);font-size:20px;line-height:1;}
+
+/* HEADLINE */
+.card-headline{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(36px,6vw,52px);
+  color:var(--black);line-height:.9;letter-spacing:.02em;
+  margin-bottom:12px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .6s ease .6s,transform .6s ease .6s;
+}
+.card-headline.go{opacity:1;transform:translateY(0);}
+
+.card-sub{
+  font-size:14px;color:#4A4A4A;font-weight:300;line-height:1.65;
+  margin-bottom:32px;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .5s ease .7s,transform .5s ease .7s;
+}
+.card-sub.go{opacity:1;transform:translateY(0);}
+.card-sub strong{color:var(--black);font-weight:600;}
+
+/* DIVIDER */
+.card-divider{
+  height:1px;background:rgba(10,10,10,.08);
+  margin-bottom:28px;
+  opacity:0;transition:opacity .4s ease .8s;
+}
+.card-divider.go{opacity:1;}
+
+/* ROADMAP */
+.roadmap{
+  display:flex;flex-direction:column;gap:0;
+  margin-bottom:32px;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .5s ease .85s,transform .5s ease .85s;
+}
+.roadmap.go{opacity:1;transform:translateY(0);}
+
+.roadmap-step{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:12px 0;
+  border-bottom:1px solid rgba(10,10,10,.06);
+}
+.roadmap-step:last-child{border-bottom:none;}
+.step-num{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;
+  letter-spacing:.08em;color:rgba(10,10,10,.25);
+  flex-shrink:0;width:20px;margin-top:2px;
+}
+.step-content{}
+.step-name{font-size:13px;font-weight:600;color:var(--black);margin-bottom:2px;}
+.step-desc{font-size:12px;color:#6B6B6B;font-weight:300;line-height:1.5;}
+
+/* PROGRESS */
+.progress-wrap{
+  margin-bottom:8px;
+  opacity:0;transition:opacity .4s ease 1s;
+}
+.progress-wrap.go{opacity:1;}
+.progress-label{
+  font-size:11px;color:#6B6B6B;letter-spacing:.06em;
+  margin-bottom:8px;display:flex;justify-content:space-between;
+}
+.progress-track{height:2px;background:rgba(10,10,10,.08);border-radius:2px;overflow:hidden;}
+.progress-fill{
+  height:100%;background:var(--black);width:0%;
+  transition:width .8s cubic-bezier(.4,0,.2,1);
+  border-radius:2px;
+}
+.progress-msg{
+  font-size:11px;color:#6B6B6B;letter-spacing:.05em;margin-top:8px;
+  min-height:16px;transition:opacity .3s ease;
+}
+
+/* QUOTE */
+#plitt-quote{
+  position:fixed;bottom:48px;left:50%;transform:translateX(-50%);
+  max-width:480px;width:calc(100vw - 48px);
+  text-align:center;
+  font-size:12px;color:rgba(232,230,224,.2);
+  font-weight:300;line-height:1.7;font-style:italic;
+  letter-spacing:.03em;
+  opacity:0;transition:opacity 1s ease;
+  z-index:1;
+  pointer-events:none;
+}
+
+@media(max-width:500px){
+  #main-card{padding:36px 28px 32px;}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<div id="main-card">
+
+  <div class="check-wrap" id="check-wrap">
+    <span class="check-icon">✓</span>
+  </div>
+
+  <h1 class="card-headline" id="headline">YOUR PLAN<br>IS BEING BUILT.</h1>
+
+  <p class="card-sub" id="card-sub">
+    Your answers are being read right now. Check <strong id="email-display">your inbox</strong> — your personalised skill check link is on its way. While you wait, here is what the next hour of your life looks like.
+  </p>
+
+  <div class="card-divider" id="card-divider"></div>
+
+  <div class="roadmap" id="roadmap">
+    <div class="roadmap-step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <div class="step-name">Skill Check</div>
+        <div class="step-desc">6 questions built around your specific skills. Not a generic test. The real thing.</div>
+      </div>
+    </div>
+    <div class="roadmap-step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <div class="step-name">Your Results</div>
+        <div class="step-desc">Where you actually stand. Honest, direct, with a learning path if you need one.</div>
+      </div>
+    </div>
+    <div class="roadmap-step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <div class="step-name">Your Hustle</div>
+        <div class="step-desc">Four options built around who you are. Your skills, your city, your time. Pick one.</div>
+      </div>
+    </div>
+    <div class="roadmap-step">
+      <div class="step-num">04</div>
+      <div class="step-content">
+        <div class="step-name">Your Niche, Tools and First Client</div>
+        <div class="step-desc">The exact corner of the market you will own. The tools you need. The client you are looking for.</div>
+      </div>
+    </div>
+    <div class="roadmap-step">
+      <div class="step-num">05</div>
+      <div class="step-content">
+        <div class="step-name">Your 60 Day Mission</div>
+        <div class="step-desc">One task a day. Built around your hustle. Your first client by the end. No excuses.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">
+      <span id="progress-stage">Building your plan</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-msg" id="progress-msg">Reading your answers...</div>
+  </div>
+
+</div>
+
+<div id="plitt-quote">"No one walks into the arena with their hand raised. The hand gets raised because of everything that happened when nobody was watching."<br><span style="opacity:.6;font-style:normal;letter-spacing:.1em;font-size:10px;">— Greg Plitt</span></div>
+
+<script>
+// CURSOR
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';});
+
+// READ EMAIL FROM URL
+const params = new URLSearchParams(window.location.search);
+const email = params.get('email') || '';
+if(email){
+  document.getElementById('email-display').textContent = email;
+  document.getElementById('email-display').style.fontWeight = '600';
+}
+
+// ANIMATE CARD IN
+setTimeout(()=>document.getElementById('main-card').classList.add('go'), 100);
+setTimeout(()=>document.getElementById('check-wrap').classList.add('go'), 200);
+setTimeout(()=>document.getElementById('headline').classList.add('go'), 300);
+setTimeout(()=>document.getElementById('card-sub').classList.add('go'), 400);
+setTimeout(()=>document.getElementById('card-divider').classList.add('go'), 500);
+setTimeout(()=>document.getElementById('roadmap').classList.add('go'), 600);
+setTimeout(()=>document.getElementById('progress-wrap').classList.add('go'), 700);
+
+// PLITT QUOTE — fades in after 4 seconds
+setTimeout(()=>document.getElementById('plitt-quote').style.opacity='1', 4000);
+
+// ANIMATED PROGRESS
+const stages = [
+  {msg:'Reading your answers...', pct:15, label:'Building your plan'},
+  {msg:'Mapping your skills to available hustles...', pct:32, label:'Finding your hustle'},
+  {msg:'Personalising your niche options...', pct:52, label:'Carving your niche'},
+  {msg:'Building your tool stack...', pct:68, label:'Selecting your tools'},
+  {msg:'Profiling your first client...', pct:82, label:'Identifying your client'},
+  {msg:'Writing your 60 day mission...', pct:93, label:'Writing your mission'},
+  {msg:'Your email is on its way.', pct:100, label:'Done'}
+];
+
+const fill   = document.getElementById('progress-fill');
+const msg    = document.getElementById('progress-msg');
+const stage  = document.getElementById('progress-stage');
+
+let step = 0;
+const timings = [0, 4000, 9000, 14000, 20000, 27000, 35000];
+
+function runStage(i){
+  if(i >= stages.length) return;
+  const s = stages[i];
+  fill.style.width   = s.pct + '%';
+  stage.textContent  = s.label;
+  msg.style.opacity  = '0';
+  setTimeout(()=>{
+    msg.textContent  = s.msg;
+    msg.style.opacity = '1';
+  }, 300);
+  if(i < stages.length - 1){
+    setTimeout(()=>runStage(i+1), timings[i+1] - timings[i]);
+  }
+}
+
+setTimeout(()=>runStage(0), 800);
+</script>
+</body>
+</html>

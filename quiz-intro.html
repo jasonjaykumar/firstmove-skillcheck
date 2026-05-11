@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Before We Begin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:rgba(232,230,224,.35);--divider:rgba(232,230,224,.12);}
+html,body{width:100%;min-height:100%;background:var(--black);font-family:'Space Grotesk',sans-serif;cursor:none;overflow-x:hidden;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--cream);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:40px;height:40px;}
+
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}}
+
+#page{
+  max-width:680px;margin:0 auto;
+  padding:80px 40px 100px;
+  position:relative;z-index:1;
+  perspective:1200px;
+}
+
+/* LOGO */
+.logo{
+  font-family:'Bebas Neue',sans-serif;font-size:16px;
+  letter-spacing:.1em;color:rgba(232,230,224,.3);
+  margin-bottom:80px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease,transform .5s ease;
+}
+.logo.go{opacity:1;transform:translateY(0);}
+
+/* HERO */
+.hero-eyebrow{
+  font-size:10px;letter-spacing:.35em;text-transform:uppercase;
+  color:rgba(232,230,224,.3);margin-bottom:18px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s ease .1s,transform .5s ease .1s;
+}
+.hero-eyebrow.go{opacity:1;transform:translateY(0);}
+
+.hero-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(52px,10vw,96px);
+  color:var(--cream);line-height:.88;letter-spacing:.02em;
+  margin-bottom:24px;
+  opacity:0;transform:translateY(22px);
+  transition:opacity .7s ease .2s,transform .7s cubic-bezier(.22,1,.36,1) .2s;
+}
+.hero-title.go{opacity:1;transform:translateY(0);}
+
+.hero-sub{
+  font-size:15px;color:rgba(232,230,224,.5);
+  font-weight:300;line-height:1.75;max-width:460px;
+  margin-bottom:16px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .6s ease .35s,transform .6s ease .35s;
+}
+.hero-sub.go{opacity:1;transform:translateY(0);}
+
+.hero-quote{
+  font-size:13px;color:rgba(232,230,224,.28);
+  font-style:italic;font-weight:300;line-height:1.6;
+  margin-bottom:64px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .6s ease .45s,transform .6s ease .45s;
+}
+.hero-quote.go{opacity:1;transform:translateY(0);}
+
+/* CARDS */
+.cards{
+  display:flex;flex-direction:column;gap:16px;
+  margin-bottom:56px;
+}
+
+.intro-card{
+  border:1.5px solid var(--divider);
+  border-radius:20px;
+  padding:32px 36px;
+  position:relative;
+  overflow:hidden;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1),border-color .3s ease,box-shadow .3s ease;
+  transform-style:preserve-3d;
+  will-change:transform;
+  cursor:none;
+}
+.intro-card.go{opacity:1;transform:translateY(0);}
+.intro-card:hover{border-color:rgba(232,230,224,.25);box-shadow:0 8px 40px rgba(0,0,0,.4);}
+
+.card-num{
+  font-family:'Bebas Neue',sans-serif;font-size:11px;
+  letter-spacing:.25em;color:rgba(232,230,224,.2);
+  margin-bottom:12px;
+}
+.card-title{
+  font-family:'Bebas Neue',sans-serif;font-size:26px;
+  color:var(--cream);letter-spacing:.04em;margin-bottom:12px;line-height:1;
+}
+.card-body{
+  font-size:14px;color:rgba(232,230,224,.5);
+  font-weight:300;line-height:1.75;
+}
+.card-body strong{color:rgba(232,230,224,.8);font-weight:500;}
+
+/* subtle inner glow on hover */
+.intro-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%, rgba(232,230,224,.04) 0%, transparent 70%);
+  opacity:0;transition:opacity .3s ease;pointer-events:none;
+}
+.intro-card:hover::before{opacity:1;}
+
+/* TIME ESTIMATE */
+.time-note{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:48px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease .6s,transform .5s ease .6s;
+}
+.time-note.go{opacity:1;transform:translateY(0);}
+.time-dot{width:4px;height:4px;border-radius:50%;background:rgba(232,230,224,.25);flex-shrink:0;}
+.time-text{font-size:12px;color:rgba(232,230,224,.28);letter-spacing:.06em;font-weight:300;}
+
+/* CTA */
+.cta-wrap{
+  opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease .7s,transform .5s cubic-bezier(.22,1,.36,1) .7s;
+}
+.cta-wrap.go{opacity:1;transform:translateY(0);}
+
+.cta-btn{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--cream);color:var(--black);
+  border:none;border-radius:50px;
+  padding:16px 36px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14px;font-weight:700;letter-spacing:.06em;
+  cursor:none;
+  transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
+}
+.cta-btn:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(232,230,224,.15);}
+.cta-btn:active{transform:scale(.97);}
+
+.cta-sub{
+  margin-top:16px;
+  font-size:11px;color:rgba(232,230,224,.2);
+  letter-spacing:.08em;font-weight:300;
+}
+
+@media(max-width:600px){
+  #page{padding:52px 24px 80px;}
+  .intro-card{padding:24px 24px;}
+  .logo{margin-bottom:52px;}
+  .hero-title{font-size:clamp(44px,12vw,72px);}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<div id="page">
+
+  <div class="logo" id="logo">FIRST MOVE</div>
+
+  <div class="hero-eyebrow" id="eyebrow">What comes next</div>
+  <h1 class="hero-title" id="title">BEFORE<br>WE BEGIN.</h1>
+  <p class="hero-sub" id="sub">Every second you wait is a second someone else moves. Standing still in a world of such rapid change is quite possibly the most dangerous move you can make. Championships are not won in the arena. They are won in the thousands of hours in the training room, the labs, the 5am runs when it is raining and everyone else is sleeping. That is when it is won. The heartbeat of a champion is a light switch that does not turn on and off when someone is watching. It is constant.</p>
+  <p class="hero-quote" id="quote">For once in your life take ownership. Have credibility behind your actions and your words. Mean what you say. Do what you say. Follow through on something one time. Just one time. You will feel a high you have never felt before. — Greg Plitt</p>
+
+  <div class="cards" id="cards">
+
+    <div class="intro-card" id="card-0">
+      <div class="card-num">01</div>
+      <div class="card-title">What We Get</div>
+      <div class="card-body">15 answers. Your skills. Your city. Your time. Your language. What drives you. What you have tried and walked away from. Every answer you give here is a brick. The foundation of what gets built next depends entirely on <strong>how honest you lay them.</strong></div>
+    </div>
+
+    <div class="intro-card" id="card-1">
+      <div class="card-num">02</div>
+      <div class="card-title">Be Open</div>
+      <div class="card-body">Describe yourself like the whole world is listening. Because what comes out the other side is only as powerful as what goes in. Nobody is judging here. Nobody is keeping score. The more of yourself you put into this, the more precisely your path gets carved out. <strong>Vague in. Vague out.</strong> You decide.</div>
+    </div>
+
+    <div class="intro-card" id="card-2">
+      <div class="card-num">03</div>
+      <div class="card-title">What You Get</div>
+      <div class="card-body">The plan that was always meant for you. Your hustle. Your niche. Your tools. Your first client. Your 60 days. None of it borrowed from someone else's journey. All of it forged around yours. By the time you walk out the other side of this, you will know exactly what your first move is. <strong>And you will have no excuse not to make it.</strong></div>
+    </div>
+
+  </div>
+
+  <div class="time-note" id="time-note">
+    <div class="time-dot"></div>
+    <span class="time-text">Takes about 4 minutes. No right answers. Only honest ones.</span>
+  </div>
+
+  <div class="cta-wrap" id="cta-wrap">
+    <button class="cta-btn" id="cta-btn">I am ready. Let's go →</button>
+    <p class="cta-sub">You will receive your personalised skill check by email immediately after.</p>
+  </div>
+
+</div>
+
+<script>
+// CURSOR
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';});
+document.addEventListener('mouseover', e=>{cur.classList.toggle('big', !!e.target.closest('button,.intro-card'));});
+
+// ANIMATE IN
+const els = ['logo','eyebrow','title','sub','quote','time-note','cta-wrap'];
+els.forEach((id, i)=>{
+  setTimeout(()=>document.getElementById(id)?.classList.add('go'), 100 + i*80);
+});
+
+// CARDS STAGGER
+[0,1,2].forEach(i=>{
+  setTimeout(()=>document.getElementById('card-'+i)?.classList.add('go'), 500 + i*120);
+});
+
+// 3D TILT
+document.addEventListener('mousemove', e=>{
+  document.querySelectorAll('.intro-card.go').forEach(card=>{
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const dx = (e.clientX - cx) / (rect.width/2);
+    const dy = (e.clientY - cy) / (rect.height/2);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < 1.4){
+      const rx = dy * -5;
+      const ry = dx * 5;
+      card.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(4px)`;
+    } else {
+      card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
+    }
+  });
+});
+
+document.addEventListener('mouseleave', ()=>{
+  document.querySelectorAll('.intro-card').forEach(card=>{
+    card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
+  });
+});
+
+// CTA
+document.getElementById('cta-btn').addEventListener('click', ()=>{
+  window.location.href = 'https://tally.so/r/J9kXxR';
+});
+</script>
+</body>
+</html>
