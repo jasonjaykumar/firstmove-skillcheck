@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Moves</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--cream);font-family:'Space Grotesk',sans-serif;cursor:none;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--black);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:40px;height:40px;}
+
+/* GRAIN */
+body::after{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}
+30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}
+60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}};
+
+/* ══════════════════════════════
+   STATIC TRANSITION OVERLAY
+   Dark TV static sliding right
+   ══════════════════════════════ */
+#static-overlay{
+  position:fixed;inset:0;z-index:500;
+  pointer-events:none;
+  opacity:0;
+}
+#static-canvas{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+}
+
+/* ══════════════════════════════
+   EDU SCREEN — light theme, scrollable
+   ══════════════════════════════ */
+#screen-edu{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:var(--black);z-index:20;
+  overflow-y:scroll;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:56px 64px 120px;
+  display:block;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s ease;
+}
+#screen-edu.active{opacity:1;pointer-events:auto;}
+
+.edu-inner{max-width:560px;width:100%;}
+
+.edu-eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(232,230,224,.35);font-weight:400;margin-bottom:28px;opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease;}
+.edu-eyebrow.go{opacity:1;transform:translateY(0);}
+.edu-headline{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,8vw,72px);color:var(--cream);line-height:.93;letter-spacing:.01em;margin-bottom:32px;opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1);}
+.edu-headline.go{opacity:1;transform:translateY(0);}
+.edu-divider{width:40px;height:1px;background:rgba(232,230,224,.2);margin-bottom:28px;opacity:0;transition:opacity .4s ease;}
+.edu-divider.go{opacity:1;}
+.edu-body{font-size:15px;color:rgba(232,230,224,.65);line-height:1.8;font-weight:300;margin-bottom:16px;opacity:0;transform:translateY(12px);transition:opacity .7s ease,transform .7s ease;}
+.edu-body.go{opacity:1;transform:translateY(0);}
+.edu-example{border-left:2px solid rgba(232,230,224,.15);padding:14px 20px;margin-bottom:32px;opacity:0;transition:opacity .6s ease;}
+.edu-example.go{opacity:1;}
+.edu-example-label{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(232,230,224,.25);margin-bottom:8px;}
+.edu-example p{font-size:13px;color:rgba(232,230,224,.5);line-height:1.65;font-weight:300;}
+.edu-example strong{color:rgba(232,230,224,.9);font-weight:600;}
+.edu-btn{background:var(--cream);color:var(--black);border:none;padding:16px 40px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;cursor:none;opacity:0;transform:translateY(8px);transition:opacity .6s ease,transform .6s ease,box-shadow .25s ease;}
+.edu-btn.go{opacity:1;transform:translateY(0);}
+.edu-btn:hover{transform:translateY(-2px)!important;box-shadow:0 10px 28px rgba(10,10,10,.18);}
+
+/* ══════════════════════════════
+   OTHER SCREENS — fixed, stacked
+   ══════════════════════════════ */
+.screen{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:48px 64px;
+  opacity:0;pointer-events:none;
+  z-index:10;
+  transition:opacity .3s ease;
+}
+.screen.active{opacity:1;pointer-events:auto;}
+
+/* INTRO SCREEN */
+#screen-intro{background:var(--black);}
+.intro-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(56px,12vw,120px);
+  color:var(--cream);line-height:.88;letter-spacing:.01em;
+  max-width:560px;width:100%;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1);
+}
+.intro-name.go{opacity:1;transform:translateY(0);}
+.intro-headline{
+  font-size:clamp(15px,2.2vw,20px);
+  color:rgba(232,230,224,.75);
+  font-weight:300;line-height:1.65;
+  max-width:480px;width:100%;
+  margin-top:20px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .7s ease .25s, transform .7s cubic-bezier(.22,1,.36,1) .25s;
+}
+.intro-headline.go{opacity:1;transform:translateY(0);}
+.intro-fm{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(11px,1.4vw,14px);
+  color:rgba(232,230,224,.2);
+  letter-spacing:.35em;text-transform:uppercase;
+  margin-top:32px;
+  max-width:560px;width:100%;
+  opacity:0;transition:opacity .5s ease .6s;
+}
+.intro-fm.go{opacity:1;}
+.intro-tap{position:fixed;bottom:40px;left:64px;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(232,230,224,.25);opacity:0;transition:opacity .5s ease .8s;animation:none;}
+.intro-tap.go{opacity:1;animation:tapPulse 2s ease 1.3s infinite;}
+@keyframes tapPulse{0%,100%{opacity:.25;}50%{opacity:.6;}}
+
+/* HUSTLE SCREENS — light theme */
+.hustle-screen{
+  background:var(--cream);
+  align-items:flex-start;
+  overflow-y:auto;
+  padding:80px 64px 120px;
+  justify-content:flex-start;
+  display:block !important;
+}
+
+/* NAV */
+.hustle-nav{position:fixed;top:0;left:0;right:0;z-index:40;padding:20px 64px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,var(--cream) 70%,transparent);opacity:0;pointer-events:none;transition:opacity .4s ease;}
+.hustle-nav.visible{opacity:1;pointer-events:auto;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--black);letter-spacing:.05em;}
+.nav-counter{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);}
+
+/* HUSTLE CARD */
+.hustle-inner{max-width:600px;width:100%;margin:0 auto;}
+
+.hustle-locked-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(52px,10vw,96px);
+  color:transparent;
+  background:var(--divider);
+  border-radius:8px;
+  padding:4px 16px;
+  letter-spacing:.01em;line-height:1;
+  user-select:none;
+  filter:blur(6px);
+  transition:filter .7s ease,background .5s ease,color .5s ease,padding .5s ease,border-radius .5s ease;
+  display:inline-block;
+  margin-bottom:20px;
+}
+.hustle-locked-name.revealed{filter:blur(0);background:transparent;color:var(--black);padding:0;border-radius:0;}
+
+.hustle-reframe{font-size:12px;color:var(--muted);font-style:italic;letter-spacing:.04em;margin-bottom:20px;opacity:0;max-height:0;overflow:hidden;transition:opacity .5s ease .3s,max-height .4s ease;}
+.hustle-reframe.visible{opacity:1;max-height:40px;}
+
+.hustle-reveal-btn{background:transparent;border:1.5px solid var(--divider);color:var(--secondary);padding:12px 28px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;cursor:none;transition:border-color .2s,color .2s,transform .2s;margin-bottom:28px;}
+.hustle-reveal-btn:hover{border-color:var(--secondary);color:var(--black);transform:translateX(4px);}
+.hustle-reveal-btn.hidden{display:none;}
+
+.hustle-content{opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .6s ease .3s,transform .6s cubic-bezier(.22,1,.36,1) .3s;}
+.hustle-content.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+
+.hustle-meta{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:24px;border-bottom:1px solid var(--divider);}
+.meta-item{display:flex;flex-direction:column;gap:4px;}
+.meta-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);}
+.meta-value{font-size:14px;color:var(--black);font-weight:500;}
+
+.hustle-section{margin-bottom:24px;}
+.hustle-section-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.hustle-section-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.hustle-section p{font-size:13px;color:var(--secondary);line-height:1.78;font-weight:300;}
+
+.hustle-moves{display:flex;flex-direction:column;gap:8px;}
+.hustle-move{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border:1px solid var(--divider);border-radius:12px;transition:border-color .2s,transform .2s;}
+.hustle-move:hover{border-color:var(--secondary);transform:translateX(4px);}
+.move-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--divider);line-height:1;flex-shrink:0;margin-top:1px;}
+.move-text{font-size:13px;color:var(--secondary);line-height:1.65;font-weight:300;}
+
+.hustle-select-btn{margin-top:32px;width:100%;background:var(--black);color:var(--cream);border:none;padding:18px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease,box-shadow .2s ease;pointer-events:none;}
+.hustle-select-btn.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+.hustle-select-btn.hidden{display:none;}
+.hustle-select-btn:hover{transform:translateY(-2px)!important;box-shadow:0 10px 32px rgba(10,10,10,.18);}
+.hustle-two-col{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+.hustle-pill-block{flex:1;min-width:140px;}
+.hustle-pill{font-size:12px;color:var(--secondary);font-weight:400;line-height:1.5;padding:10px 14px;border:1px solid var(--divider);border-radius:10px;margin-top:6px;}
+
+/* ARROWS */
+.hustle-arrows{position:fixed;bottom:36px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;z-index:40;opacity:0;pointer-events:none;transition:opacity .4s ease;}
+.hustle-arrows.visible{opacity:1;pointer-events:auto;}
+.arrow-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--divider);background:transparent;color:var(--secondary);font-size:18px;cursor:none;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s,transform .2s;}
+.arrow-btn:hover{border-color:var(--secondary);color:var(--black);transform:scale(1.08);}
+.arrow-btn:disabled{opacity:.25;pointer-events:none;}
+.arrow-dots{display:flex;gap:6px;align-items:center;}
+.arrow-dot{width:5px;height:5px;border-radius:50%;background:var(--divider);transition:background .3s,transform .3s;}
+.arrow-dot.active{background:var(--black);transform:scale(1.3);}
+.arrow-dot.seen{background:var(--secondary);}
+
+/* EDU RETURN */
+#edu-return{position:fixed;bottom:28px;left:64px;z-index:50;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);cursor:none;background:none;border:none;font-family:'Space Grotesk',sans-serif;font-weight:500;transition:color .2s,opacity .3s ease;padding:0;opacity:0;pointer-events:none;}
+#edu-return.visible{opacity:1;pointer-events:auto;}
+#edu-return:hover{color:var(--black);}
+
+/* PLITT SCREEN — black */
+#screen-plitt{background:var(--black);}
+.plitt-quote{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,56px);color:var(--cream);line-height:1.0;letter-spacing:.01em;text-align:center;max-width:520px;opacity:0;transform:translateY(16px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1);}
+.plitt-quote.go{opacity:1;transform:translateY(0);}
+.plitt-attr{font-size:11px;letter-spacing:.2em;color:rgba(232,230,224,.25);text-align:center;margin-top:16px;opacity:0;transition:opacity .5s ease .4s;}
+.plitt-attr.go{opacity:1;}
+.plitt-skip{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:rgba(232,230,224,.2);cursor:none;background:none;border:none;font-family:'Space Grotesk',sans-serif;transition:color .2s;opacity:0;pointer-events:none;}
+.plitt-skip.go{opacity:1;pointer-events:auto;}
+
+/* LOCK-IN SCREEN — light */
+#screen-lockin{background:var(--cream);overflow-y:auto;padding:80px 64px 100px;justify-content:flex-start;align-items:flex-start;display:block!important;}
+.lockin-inner{max-width:600px;width:100%;margin:0 auto;}
+.lockin-eyebrow{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;opacity:0;transition:opacity .5s ease .1s;}
+.lockin-eyebrow.go{opacity:1;}
+.lockin-headline{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,8vw,72px);color:var(--black);line-height:.93;letter-spacing:.01em;margin-bottom:36px;opacity:0;transform:translateY(16px);transition:opacity .7s ease .2s,transform .7s cubic-bezier(.22,1,.36,1) .2s;}
+.lockin-headline.go{opacity:1;transform:translateY(0);}
+.lockin-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:32px;}
+.lockin-card{border:1.5px solid var(--divider);border-radius:16px;padding:18px 20px;cursor:none;display:flex;align-items:center;gap:16px;transition:border-color .25s,background .25s,transform .2s;opacity:0;transform:translateY(12px);}
+.lockin-card.go{opacity:1;transform:translateY(0);transition:border-color .25s,background .25s,transform .2s,opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1);}
+.lockin-card:hover{border-color:var(--secondary);transform:translateX(4px);}
+.lockin-card.selected{border-color:var(--black);background:rgba(10,10,10,.03);}
+.lockin-card-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--divider);flex-shrink:0;line-height:1;}
+.lockin-card.selected .lockin-card-num{color:var(--secondary);}
+.lockin-card-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted);letter-spacing:.02em;line-height:1;}
+.lockin-card.selected .lockin-card-name{color:var(--black);}
+.lockin-card-range{font-size:11px;color:var(--divider);margin-top:3px;}
+.lockin-card.selected .lockin-card-range{color:var(--muted);}
+.lockin-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--divider);margin-left:auto;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s;font-size:10px;color:transparent;}
+.lockin-card.selected .lockin-check{border-color:var(--black);background:var(--black);color:var(--cream);}
+.lockin-btn{width:100%;background:var(--black);color:var(--cream);border:none;padding:18px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;opacity:.25;pointer-events:none;transition:opacity .3s,transform .25s,box-shadow .25s;margin-bottom:12px;}
+.lockin-btn.active{opacity:1;pointer-events:auto;}
+.lockin-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(10,10,10,.18);}
+.lockin-reassure{text-align:center;font-size:11px;color:var(--muted);letter-spacing:.04em;opacity:0;transition:opacity .5s ease .8s;}
+.lockin-reassure.go{opacity:1;}
+
+/* MODAL */
+#modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(10,10,10,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:32px;opacity:0;pointer-events:none;transition:opacity .35s ease;}
+#modal-overlay.active{opacity:1;pointer-events:auto;}
+.modal-box{background:var(--cream);border:1.5px solid var(--divider);border-radius:24px;padding:36px;max-width:480px;width:100%;transform:translateY(20px) scale(.97);transition:transform .35s cubic-bezier(.22,1,.36,1);}
+#modal-overlay.active .modal-box{transform:translateY(0) scale(1);}
+.modal-label{font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.modal-hustle-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,7vw,60px);color:var(--black);line-height:.93;letter-spacing:.01em;margin-bottom:24px;}
+.modal-divider{height:1px;background:var(--divider);margin-bottom:20px;}
+.modal-summary-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.modal-summary{font-size:13px;color:var(--secondary);line-height:1.75;font-weight:300;margin-bottom:28px;}
+.modal-confirm-btn{width:100%;background:var(--black);color:var(--cream);border:none;padding:16px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;margin-bottom:10px;transition:transform .25s,box-shadow .25s;}
+.modal-confirm-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(10,10,10,.18);}
+.modal-back-btn{width:100%;background:transparent;color:var(--muted);border:1.5px solid var(--divider);padding:14px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;cursor:none;transition:border-color .2s,color .2s;}
+.modal-back-btn:hover{border-color:var(--secondary);color:var(--secondary);}
+
+/* REVEAL FLASH */
+#reveal-flash{position:fixed;inset:0;background:var(--black);z-index:80;opacity:0;pointer-events:none;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<canvas id="cursor-light" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
+
+<!-- STATIC TRANSITION OVERLAY -->
+<div id="static-overlay">
+  <canvas id="static-canvas"></canvas>
+</div>
+
+<!-- REVEAL FLASH -->
+<div id="reveal-flash"></div>
+
+<!-- EDU SCREEN -->
+<div id="screen-edu" class="active">
+  <canvas id="edu-static" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:19;opacity:.28;"></canvas>
+  <div class="edu-inner" style="position:relative;z-index:1;">
+    <div class="edu-eyebrow">Before you see your moves</div>
+    <h1 class="edu-headline">The hustle<br>is the door.<br>The niche<br>is the key.</h1>
+    <div class="edu-divider"></div>
+    <p class="edu-body">You're about to see four hustles. On the surface they might sound familiar. That's because the hustle isn't what makes you money — the niche does. Anyone can offer fitness coaching. Almost nobody is offering specialised fitness coaching for gamers and livestreamers who train at home. That specificity is what gets you clients, charges premium rates, and builds something real.</p>
+    <div class="edu-example">
+      <div class="edu-example-label">The difference</div>
+      <p id="edu-example-text">Loading your example...</p>
+    </div>
+    <p class="edu-body" style="font-size:13px;margin-bottom:36px;">Your niche comes after your hustle. First — pick the right door. Then we give you the key. You can always come back and read this again before you choose.</p>
+    <button class="edu-btn" id="edu-proceed">I understand — show me my moves</button>
+  </div>
+</div>
+
+<!-- INTRO SCREEN -->
+<div class="screen" id="screen-intro">
+  <div class="intro-name" id="intro-name">Jason.</div>
+  <div class="intro-headline" id="intro-headline">We're not ordinary.<br>You don't want to be ordinary.<br>That's why you're here.<br>Let's find your first move.</div>
+  <div class="intro-fm" id="intro-fm">First Move</div>
+  <div class="intro-tap" id="intro-tap">Tap anywhere to continue</div>
+</div>
+
+<!-- HUSTLE SCREENS -->
+<div class="screen hustle-screen" id="screen-h0" data-idx="0"></div>
+<div class="screen hustle-screen" id="screen-h1" data-idx="1"></div>
+<div class="screen hustle-screen" id="screen-h2" data-idx="2"></div>
+<div class="screen hustle-screen" id="screen-h3" data-idx="3"></div>
+
+<!-- PLITT BEAT -->
+<div class="screen" id="screen-plitt">
+  <p class="plitt-quote">"The hardest things in life are done the least but provide the most."</p>
+  <p class="plitt-attr">— Greg Plitt</p>
+  <button class="plitt-skip" id="plitt-skip">Tap to continue</button>
+</div>
+
+<!-- LOCK IN SCREEN -->
+<div class="screen" id="screen-lockin">
+  <div class="lockin-inner">
+    <div class="lockin-eyebrow">You've seen all four.</div>
+    <h2 class="lockin-headline">Time to pick<br>your move.</h2>
+    <div class="lockin-cards" id="lockin-cards"></div>
+    <button class="lockin-btn" id="lockin-confirm">Lock In My Move</button>
+    <p class="lockin-reassure">You can revisit all four moves before confirming.</p>
+  </div>
+</div>
+
+<!-- HUSTLE NAV -->
+<div class="hustle-nav" id="hustle-nav">
+  <span class="nav-logo">First Move</span>
+  <span class="nav-counter" id="nav-counter">Move 1 of 4</span>
+</div>
+
+<!-- ARROWS -->
+<div class="hustle-arrows" id="hustle-arrows">
+  <button class="arrow-btn" id="arr-prev">←</button>
+  <div class="arrow-dots" id="arrow-dots"></div>
+  <button class="arrow-btn" id="arr-next">→</button>
+</div>
+
+<!-- EDU RETURN -->
+<button id="edu-return">← Why niches matter</button>
+
+<!-- BLACKOUT REVEAL SCREEN -->
+<div id="reveal-blackout" style="position:fixed;inset:0;background:#0A0A0A;z-index:85;opacity:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px;">
+  <canvas id="blackout-static" style="position:absolute;inset:0;width:100%;height:100%;opacity:.28;"></canvas>
+  <div id="blackout-quote" style="position:relative;z-index:2;font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4.5vw,44px);color:#E8E6E0;line-height:1.05;letter-spacing:.01em;text-align:center;max-width:540px;opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1);"></div>
+  <div id="blackout-attr" style="position:relative;z-index:2;font-size:11px;letter-spacing:.2em;color:rgba(232,230,224,.3);text-align:center;margin-top:14px;opacity:0;transition:opacity .5s ease .3s;"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-label">Your chosen move</div>
+    <div class="modal-hustle-name" id="modal-name"></div>
+    <div class="modal-divider"></div>
+    <div class="modal-summary-label">What you're committing to</div>
+    <p class="modal-summary" id="modal-summary"></p>
+    <button class="modal-confirm-btn" id="modal-confirm">This is my move</button>
+    <button class="modal-back-btn" id="modal-back">Go back and reconsider</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// CURSOR
+// ══════════════════════════════════
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => { cursor.style.left=e.clientX+'px'; cursor.style.top=e.clientY+'px'; });
+document.addEventListener('mouseover', e => { cursor.classList.toggle('big', !!e.target.closest('button,a,.lockin-card')); });
+
+// ══════════════════════════════════
+// AIRTABLE FETCH + PARSER
+// ══════════════════════════════════
+const WORKER = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+const urlP   = new URLSearchParams(window.location.search);
+const recId  = urlP.get('id') || '';
+
+let HUSTLES = [];
+let dataLoaded = false;
+let pollAttempts = 0;
+
+function cleanRec(t){ return (t||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
+
+function parseHustles(raw){
+  const text = cleanRec(raw);
+  // Split on HUSTLE_NAME: delimiter
+  const blocks = text.split(/(?=HUSTLE_NAME:)/g).filter(b=>b.trim().length>20);
+  return blocks.slice(0,4).map(block=>{
+    const get = (key) => {
+      const re = new RegExp(key + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|---)');
+      const m  = block.match(re);
+      return m ? cleanRec(m[1]) : '';
+    };
+    const name = (block.match(/HUSTLE_NAME:\s*(.+)/) || [])[1] || '';
+    const commitRaw = get('COMMITMENT_SUMMARY');
+    const commitBullets = commitRaw.split('\n')
+      .map(l=>cleanRec(l.replace(/^[•\-\*\d\.]+\s*/,'')))
+      .filter(l=>l.length>4)
+      .slice(0,5)
+      .map(b=>'• '+b)
+      .join('\n');
+    return {
+      name:        cleanRec(name),
+      range:       get('RANGE')        || '₹5,000–₹20,000/month',
+      firstMonth:  get('FIRST_MONTH')  || '₹3,000–₹8,000 realistic first month',
+      hours:       get('HOURS')        || '8–12 hrs/week',
+      timeline:    get('TIMELINE')     || 'First payment in 2–3 weeks',
+      whatItIs:    get('WHAT_IT_IS')   || '',
+      dayToDay:    get('TYPICAL_DAY')  || '',
+      saturation:  get('SATURATION')   || '',
+      competition: get('COMPETITION')  || '',
+      whyNeeded:   get('WHY_MARKET')   || '',
+      why:         get('WHY_YOU')      || '',
+      summary:     commitBullets       || ''
+    };
+  });
+}
+
+function buildScreens(){
+  // Build hustle screens now that data is ready
+  [0,1,2,3].forEach(i => {
+    const h = HUSTLES[i];
+    if(!h) return;
+    const screen = document.getElementById('screen-h'+i);
+    if(!screen) return;
+    screen.innerHTML = `
+      <div class="hustle-inner">
+        <div class="hustle-locked-name" id="name-${i}">${h.name}</div>
+        <div class="hustle-reframe" id="reframe-${i}">This sounds familiar. Your niche is what makes it yours — keep reading.</div>
+        <button class="hustle-reveal-btn" id="reveal-btn-${i}" data-i="${i}">Reveal this move →</button>
+        <div class="hustle-content" id="content-${i}">
+          <div class="hustle-meta">
+            <div class="meta-item"><span class="meta-label">Earning range</span><span class="meta-value">${h.range}</span></div>
+            <div class="meta-item"><span class="meta-label">First month</span><span class="meta-value">${h.firstMonth}</span></div>
+            <div class="meta-item"><span class="meta-label">Hours/week</span><span class="meta-value">${h.hours}</span></div>
+            <div class="meta-item"><span class="meta-label">Time to first pay</span><span class="meta-value">${h.timeline}</span></div>
+          </div>
+          <div class="hustle-section">
+            <div class="hustle-section-label">What it actually is</div>
+            <p>${h.whatItIs}</p>
+          </div>
+          <div class="hustle-section">
+            <div class="hustle-section-label">A typical day</div>
+            <p>${h.dayToDay}</p>
+          </div>
+          <div class="hustle-two-col">
+            <div class="hustle-pill-block">
+              <div class="hustle-section-label">Saturation</div>
+              <div class="hustle-pill">${h.saturation}</div>
+            </div>
+            <div class="hustle-pill-block">
+              <div class="hustle-section-label">Competition</div>
+              <div class="hustle-pill">${h.competition}</div>
+            </div>
+          </div>
+          <div class="hustle-section">
+            <div class="hustle-section-label">Why the market needs this</div>
+            <p>${h.whyNeeded}</p>
+          </div>
+          <div class="hustle-section">
+            <div class="hustle-section-label">Why this fits you</div>
+            <p>${h.why}</p>
+          </div>
+          <button class="hustle-select-btn hidden" id="select-btn-${i}" data-i="${i}">This is my move →</button>
+        </div>
+      </div>
+    `;
+  });
+
+  // Rebuild lock-in cards
+  const lockinCards = document.getElementById('lockin-cards');
+  if(lockinCards){
+    lockinCards.innerHTML = '';
+    HUSTLES.forEach((h,i) => {
+      const card = document.createElement('div');
+      card.className='lockin-card'; card.dataset.i=i;
+      card.innerHTML=`<span class="lockin-card-num">0${i+1}</span><div><div class="lockin-card-name">${h.name}</div><div class="lockin-card-range">${h.range}</div></div><div class="lockin-check">✓</div>`;
+      lockinCards.appendChild(card);
+    });
+  }
+
+  // Event delegation on document.body handles reveal and select clicks
+  updateHustleUI();
+}
+
+function pollHustles(){
+  if(!recId){ loadFallback(); return; }
+  fetch(`${WORKER}?id=${encodeURIComponent(recId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      const raw = fields['Hustle recommendations'] || fields['Hustle Recommendations'] || '';
+      if(raw && raw.trim().length > 100){
+        const parsed = parseHustles(raw);
+        if(parsed.length >= 2){
+          HUSTLES = parsed;
+          dataLoaded = true;
+          buildScreens();
+        } else {
+          retry();
+        }
+      } else { retry(); }
+    })
+    .catch(retry);
+}
+
+function retry(){
+  pollAttempts++;
+  if(pollAttempts < 15) setTimeout(pollHustles, 3000);
+  else loadFallback();
+}
+
+function loadFallback(){
+  HUSTLES = [
+    {
+      name:"Social Media Management",
+      range:"₹8,000–₹25,000/month",
+      firstMonth:"₹5,000–₹10,000 realistic first month",
+      hours:"10–15 hrs/week",
+      timeline:"First payment in 2–3 weeks",
+      whatItIs:"You manage Instagram or Facebook for businesses that have no time to post. You write captions, design graphics, schedule content, and grow their following.",
+      dayToDay:"9am: Check analytics. 10am: Write captions. 11am: Design posts in Canva. 12pm: Schedule content. Evening: Respond to comments.",
+      saturation:"HIGH — everyone says they do this. Most are bad at it.",
+      competition:"LOW if you niche down. High if you stay generic.",
+      whyNeeded:"Every local business in India is being told to go digital but has no idea how. The demand is real, the supply of skilled people is not.",
+      why:"You understand how content moves people — that instinct is exactly what small business owners pay for.",
+      summary:"• You post for businesses too busy to do it themselves\n• Niche down or get ignored\n• Consistency beats creativity\n• First client comes from showing work not talking about it\n• Two clients at ₹8,000 each = ₹16,000/month"
+    },
+    {
+      name:"Copywriting",
+      range:"₹5,000–₹20,000/month",
+      firstMonth:"₹3,000–₹8,000 realistic first month",
+      hours:"8–12 hrs/week",
+      timeline:"First payment in 1–2 weeks",
+      whatItIs:"You write words that make people take action — product descriptions, emails, landing pages, ads. A good copywriter is a salesperson who types.",
+      dayToDay:"9am: Read client brief. 10am: Research their customer. 11am: Draft copy. 2pm: Revise. One project takes 2–4 hours.",
+      saturation:"MEDIUM — many copywriters exist, very few good ones under 20.",
+      competition:"MEDIUM — clients care about results not age. Proof beats experience.",
+      whyNeeded:"Most businesses in India treat copy as an afterthought. As D2C explodes the need for words that convert has never been higher.",
+      why:"Communication instinct and research ability are the hardest things to teach in copywriting. Everything else is craft.",
+      summary:"• You write words that make people buy things\n• Research matters more than writing talent\n• One strong portfolio piece beats ten average ones\n• Start with product descriptions — easiest entry point\n• Results you can screenshot are your best pitch"
+    },
+    {
+      name:"Graphic Design",
+      range:"₹7,000–₹22,000/month",
+      firstMonth:"₹4,000–₹8,000 realistic first month",
+      hours:"12–18 hrs/week",
+      timeline:"First payment in 1–2 weeks",
+      whatItIs:"You create visual identity for brands — logos, templates, thumbnails, posters. You make things look like they were made by someone who knows what they are doing.",
+      dayToDay:"9am: Client brief. 10am: Design in Canva or Figma. 3pm: Send drafts. 4pm: Revisions. One social kit takes 4–6 hours.",
+      saturation:"HIGH — tools are accessible so everyone tries. Most output is forgettable.",
+      competition:"LOW for strategic designers. High for decorators.",
+      whyNeeded:"India has millions of small brands trying to stand out. The market for credible-looking design is enormous and largely untapped at local level.",
+      why:"Design skill plus marketing instinct is a combination most designers lack. You make things look good and understand why they need to.",
+      summary:"• You make brands look like they mean business\n• Strategy beats decoration\n• Build 3 strong portfolio pieces before pitching\n• Local creators are your fastest entry point\n• One great logo unlocks five referrals"
+    },
+    {
+      name:"Video Editing",
+      range:"₹6,000–₹20,000/month",
+      firstMonth:"₹3,000–₹7,000 realistic first month",
+      hours:"10–15 hrs/week",
+      timeline:"First payment in 1–2 weeks",
+      whatItIs:"You edit raw footage into content that keeps people watching — Reels, YouTube videos, podcast clips. The camera person shoots. You make it worth watching.",
+      dayToDay:"9am: Download footage. 10am: Rough cut in CapCut. 12pm: Add captions and music. 2pm: Export and deliver. One Reel takes 1–2 hours.",
+      saturation:"MEDIUM — demand is growing faster than supply of good editors.",
+      competition:"LOW for editors who understand retention. Most just cut and export.",
+      whyNeeded:"Every creator needs more content and less editing time. The Reels economy is exploding and editors who understand hooks are in short supply.",
+      why:"A good eye for pacing and storytelling rewards itself immediately. The tools are free and the demand is everywhere.",
+      summary:"• You turn raw footage into content worth watching\n• Speed matters as much as quality\n• Reels and Shorts are your fastest entry\n• Learn hooks and retention — that is what clients pay for\n• One creator client sends you five more"
+    }
+  ];
+  dataLoaded = true;
+  buildScreens();
+}
+
+// ══════════════════════════════════
+// STATE
+// ══════════════════════════════════
+let currentScreen = 'edu';
+let revealed = [false,false,false,false];
+let selectedHustle = null;
+let plittSeen = false;
+
+// ══════════════════════════════════
+// BUILD ARROW DOTS (static, not data-dependent)
+// ══════════════════════════════════
+const dotsEl = document.getElementById('arrow-dots');
+[0,1,2,3].forEach(i => {
+  const d = document.createElement('div');
+  d.className='arrow-dot'; d.id=`dot-${i}`;
+  dotsEl.appendChild(d);
+});
+
+// Kick off Airtable poll — buildScreens() called when data arrives
+pollHustles();
+
+// ══════════════════════════════════
+// TV STATIC TRANSITION
+// Dark noise sliding right — feels
+// like an intermission, not a page
+// ══════════════════════════════════
+const staticCanvas = document.getElementById('static-canvas');
+const staticCtx = staticCanvas.getContext('2d');
+const staticOverlay = document.getElementById('static-overlay');
+
+function resizeStatic(){
+  staticCanvas.width  = window.innerWidth;
+  staticCanvas.height = window.innerHeight;
+}
+resizeStatic();
+window.addEventListener('resize', resizeStatic);
+
+let staticRAF, staticOffset = 0;
+
+function drawStatic(progress){
+  // progress: 0→1 (slide right)
+  const W = staticCanvas.width, H = staticCanvas.height;
+  staticCtx.clearRect(0,0,W,H);
+
+  // Dark static — not pure white, very dark grain moving right
+  const imgData = staticCtx.createImageData(W, H);
+  const d = imgData.data;
+  const scrollX = Math.floor(progress * W * 1.5); // slide offset
+
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      const idx = (y*W + x)*4;
+      // noise value shifts right over time
+      const nx = (x + scrollX) % (W*2);
+      const noise = Math.random();
+      // very dark — mostly 0-30, occasional brighter fleck
+      const v = noise < 0.03 ? Math.floor(Math.random()*60+20)
+              : noise < 0.07 ? Math.floor(Math.random()*20+5)
+              : Math.floor(Math.random()*8);
+      d[idx]   = v;
+      d[idx+1] = v;
+      d[idx+2] = v;
+      d[idx+3] = 255;
+    }
+  }
+  staticCtx.putImageData(imgData, 0, 0);
+
+  // Scanlines for TV feel
+  staticCtx.fillStyle = 'rgba(0,0,0,0.35)';
+  for(let y=0; y<H; y+=3){
+    staticCtx.fillRect(0, y, W, 1);
+  }
+
+  // Horizontal bright streak moving right
+  const streakX = (progress * W * 2) % (W + 200) - 100;
+  const grad = staticCtx.createLinearGradient(streakX-80, 0, streakX+80, 0);
+  grad.addColorStop(0,'transparent');
+  grad.addColorStop(0.5,'rgba(255,255,255,0.04)');
+  grad.addColorStop(1,'transparent');
+  staticCtx.fillStyle = grad;
+  staticCtx.fillRect(0, 0, W, H);
+}
+
+function runStatic(duration, onDone){
+  const start = Date.now();
+  staticOverlay.style.opacity = '1';
+  staticOverlay.style.pointerEvents = 'auto';
+
+  function frame(){
+    const progress = (Date.now()-start)/duration;
+    if(progress >= 1){
+      staticOverlay.style.opacity = '0';
+      staticOverlay.style.pointerEvents = 'none';
+      if(onDone) onDone();
+      return;
+    }
+    drawStatic(progress);
+    staticRAF = requestAnimationFrame(frame);
+  }
+  cancelAnimationFrame(staticRAF);
+  requestAnimationFrame(frame);
+}
+
+// ══════════════════════════════════
+// REVEAL FLASH + SHAKE
+// Black flash → shake → light returns
+// ══════════════════════════════════
+const revealFlash = document.getElementById('reveal-flash');
+let shakeRAF;
+
+function shakeEl(el, intensity, duration){
+  const start = Date.now();
+  cancelAnimationFrame(shakeRAF);
+  function frame(){
+    const p = (Date.now()-start)/duration;
+    const m = intensity*(1-Math.pow(p,.5));
+    if(p>=1||m<.2){el.style.transform='none';return;}
+    el.style.transform=`translate(${(Math.random()-.5)*2*m}px,${(Math.random()-.5)*2*m}px) rotate(${(Math.random()-.5)*m*.08}deg)`;
+    shakeRAF=requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+const REVEAL_QUOTES = [
+  {q:"Go for it. This comfort zone is a dangerous zone. It's stopping you from your true potential.", a:"— Greg Plitt"},
+  {q:"\"I failed\" is 10 times the man that \"what if\" ever was. \"What if\" never went to the arena.", a:"— Greg Plitt"},
+  {q:"The clock is ticking. Are you becoming the person you want to be?", a:"— Greg Plitt"},
+  {q:"You got one life to live. Why wait until tomorrow to start it?", a:"— Greg Plitt"},
+];
+
+// Blackout static loop
+const bCanvas = document.getElementById('blackout-static');
+const bCtx = bCanvas.getContext('2d');
+let bOffset = 0, bRAF;
+
+function resizeBlackout(){
+  bCanvas.width = window.innerWidth;
+  bCanvas.height = window.innerHeight;
+}
+resizeBlackout();
+window.addEventListener('resize', resizeBlackout);
+
+function drawBlackoutStatic(){
+  const W=bCanvas.width, H=bCanvas.height;
+  const img = bCtx.createImageData(W,H);
+  const d = img.data;
+  bOffset += 3;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i=(y*W+x)*4;
+      const n=Math.random();
+      const v = n<0.04 ? Math.floor(Math.random()*50+15)
+              : n<0.08 ? Math.floor(Math.random()*18+4)
+              : Math.floor(Math.random()*7);
+      d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
+    }
+  }
+  bCtx.putImageData(img,0,0);
+  // scanlines drifting right
+  bCtx.fillStyle='rgba(0,0,0,0.42)';
+  for(let y=0;y<H;y+=3) bCtx.fillRect(0,y,W,1);
+  // moving streak
+  const sx=(bOffset*0.5)%(W+300)-150;
+  const g=bCtx.createLinearGradient(sx-120,0,sx+120,0);
+  g.addColorStop(0,'transparent');
+  g.addColorStop(0.5,'rgba(255,255,255,0.035)');
+  g.addColorStop(1,'transparent');
+  bCtx.fillStyle=g; bCtx.fillRect(0,0,W,H);
+  bRAF=requestAnimationFrame(drawBlackoutStatic);
+}
+
+function doRevealFlash(hustleIdx, onDone){
+  const bo = document.getElementById('reveal-blackout');
+  const qEl = document.getElementById('blackout-quote');
+  const aEl = document.getElementById('blackout-attr');
+  const qt = REVEAL_QUOTES[hustleIdx % REVEAL_QUOTES.length];
+
+  // Start static
+  drawBlackoutStatic();
+
+  // Fade blackout in
+  bo.style.transition='opacity .25s ease';
+  bo.style.opacity='1';
+  bo.style.pointerEvents='auto';
+
+  // Show quote after 400ms
+  setTimeout(()=>{
+    qEl.textContent = qt.q;
+    aEl.textContent = qt.a;
+    qEl.style.opacity='1'; qEl.style.transform='translateY(0)';
+    aEl.style.opacity='1';
+  }, 400);
+
+  // Light tremor while quote shows — big shake comes on reveal
+  const screenEl = document.getElementById(`screen-${currentScreen}`);
+  setTimeout(()=>shakeEl(screenEl, 8, 300), 600);
+
+  // Hold for 4s then massive shake + fade out
+  setTimeout(()=>{
+    // Quote fades out
+    qEl.style.opacity='0'; aEl.style.opacity='0';
+
+    // MASSIVE SHAKE — boulder landing
+    const screenEl2 = document.getElementById(`screen-${currentScreen}`);
+    shakeEl(screenEl2, 55, 300);
+    setTimeout(()=>shakeEl(screenEl2, 40, 400), 200);
+    setTimeout(()=>shakeEl(screenEl2, 25, 500), 450);
+    setTimeout(()=>shakeEl(screenEl2, 12, 600), 700);
+
+    // Fade blackout out while shaking
+    bo.style.transition='opacity .5s ease';
+    bo.style.opacity='0';
+    bo.style.pointerEvents='none';
+    cancelAnimationFrame(bRAF);
+    setTimeout(()=>{ if(onDone) onDone(); }, 520);
+  }, 4000);
+}
+
+// ══════════════════════════════════
+// SCREEN TRANSITIONS
+// ══════════════════════════════════
+function goTo(screenId){
+  // Static slides right for ~400ms, then switch
+  runStatic(420, ()=>{
+    // Hide all
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-edu').classList.remove('active');
+
+    // Show target
+    const target = document.getElementById(`screen-${screenId}`);
+    if(target) target.classList.add('active');
+
+    // Scroll to top if scrollable
+    if(screenId==='edu') document.getElementById('screen-edu').scrollTop=0;
+    if(screenId==='lockin'){
+      const li = document.getElementById('screen-lockin');
+      if(li) li.scrollTop=0;
+    }
+
+    currentScreen = screenId;
+    updateHustleUI();
+
+    if(screenId==='intro') triggerIntroAnims();
+    if(screenId==='plitt') triggerPlittAnims();
+    if(screenId==='lockin') triggerLockinAnims();
+  });
+}
+
+// ══════════════════════════════════
+// HUSTLE UI
+// ══════════════════════════════════
+function updateHustleUI(){
+  if(!HUSTLES.length) return; // wait for data
+  const isHustle = ['h0','h1','h2','h3'].includes(currentScreen);
+  const idx = isHustle ? parseInt(currentScreen.replace('h','')) : -1;
+
+  document.getElementById('hustle-nav').classList.toggle('visible', isHustle);
+  document.getElementById('hustle-arrows').classList.toggle('visible', isHustle);
+  document.getElementById('edu-return').classList.toggle('visible', isHustle||currentScreen==='lockin');
+
+  if(!isHustle) return;
+
+  document.getElementById('nav-counter').textContent=`Move ${idx+1} of 4`;
+  [0,1,2,3].forEach(i=>{
+    const d=document.getElementById(`dot-${i}`);
+    d.className='arrow-dot'+(i===idx?' active':revealed[i]?' seen':'');
+  });
+  document.getElementById('arr-prev').disabled = idx===0;
+  document.getElementById('arr-next').disabled = !revealed[idx];
+
+  if(allRevealed()&&revealed[idx]){
+    const sb=document.getElementById(`select-btn-${idx}`);
+    if(sb){sb.classList.remove('hidden');setTimeout(()=>sb.classList.add('visible'),200);}
+  }
+}
+
+function allRevealed(){ return revealed.every(r=>r); }
+
+// ══════════════════════════════════
+// REVEAL HUSTLE
+// ══════════════════════════════════
+document.body.addEventListener('click', e=>{
+  const btn = e.target.closest('.hustle-reveal-btn');
+  if(!btn) return;
+  const i = parseInt(btn.dataset.i);
+  if(revealed[i]) return;
+
+  // Flash + shake, then reveal
+  doRevealFlash(i, ()=>{
+    revealed[i] = true;
+    document.getElementById(`name-${i}`).classList.add('revealed');
+    btn.classList.add('hidden');
+    setTimeout(()=>document.getElementById(`reframe-${i}`).classList.add('visible'),300);
+    setTimeout(()=>document.getElementById(`content-${i}`).classList.add('visible'),500);
+    document.getElementById(`dot-${i}`)?.classList.add('seen');
+
+    if(allRevealed()){
+      [0,1,2,3].forEach(j=>{
+        const sb=document.getElementById(`select-btn-${j}`);
+        if(sb){sb.classList.remove('hidden');setTimeout(()=>sb.classList.add('visible'),200+j*60);}
+      });
+      document.getElementById('arr-next').disabled=false;
+    }
+
+    updateHustleUI();
+  });
+});
+
+// ══════════════════════════════════
+// ARROWS
+// ══════════════════════════════════
+document.getElementById('arr-prev').addEventListener('click',()=>{
+  const idx=parseInt(currentScreen.replace('h',''));
+  if(idx===0) return;
+  if(idx===2&&plittSeen) goTo('h1');
+  else goTo(`h${idx-1}`);
+});
+
+document.getElementById('arr-next').addEventListener('click',()=>{
+  const idx=parseInt(currentScreen.replace('h',''));
+  if(!revealed[idx]) return;
+  if(idx===1&&!plittSeen){ goTo('plitt'); return; }
+  if(idx===3){ goTo('lockin'); return; }
+  goTo(`h${idx+1}`);
+});
+
+// ══════════════════════════════════
+// SELECT + LOCK IN
+// ══════════════════════════════════
+document.body.addEventListener('click', e=>{
+  const btn=e.target.closest('.hustle-select-btn');
+  if(!btn) return;
+  selectedHustle=parseInt(btn.dataset.i);
+  goTo('lockin');
+});
+
+document.getElementById('lockin-cards').addEventListener('click', e=>{
+  const card=e.target.closest('.lockin-card');
+  if(!card) return;
+  selectedHustle=parseInt(card.dataset.i);
+  document.querySelectorAll('.lockin-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('lockin-confirm').classList.add('active');
+});
+
+document.getElementById('lockin-confirm').addEventListener('click',()=>{
+  if(selectedHustle===null) return;
+  const h=HUSTLES[selectedHustle];
+  document.getElementById('modal-name').textContent=h.name;
+  document.getElementById('modal-summary').innerHTML=h.summary.replace(/\n/g,'<br>');
+  document.getElementById('modal-overlay').classList.add('active');
+});
+
+document.getElementById('modal-back').addEventListener('click',()=>{
+  document.getElementById('modal-overlay').classList.remove('active');
+});
+
+document.getElementById('modal-confirm').addEventListener('click',()=>{
+  const p=new URLSearchParams(window.location.search);
+  window.location.href=`niche.html?id=${p.get('id')||''}&hustle=${encodeURIComponent(HUSTLES[selectedHustle].name)}`;
+});
+
+// ══════════════════════════════════
+// SCREEN FLOW
+// ══════════════════════════════════
+document.getElementById('edu-proceed').addEventListener('click',()=>goTo('intro'));
+document.getElementById('screen-intro').addEventListener('click',()=>goTo('h0'));
+document.getElementById('plitt-skip').addEventListener('click',()=>{plittSeen=true;goTo('h2');});
+document.getElementById('screen-plitt').addEventListener('click',e=>{ if(e.target.closest('button'))return; plittSeen=true;goTo('h2'); });
+document.getElementById('edu-return').addEventListener('click',()=>goTo('edu'));
+
+// ══════════════════════════════════
+// ANIMATION TRIGGERS
+// ══════════════════════════════════
+function triggerIntroAnims(){
+  const name = new URLSearchParams(window.location.search).get('name') || 'You';
+  const nameEl = document.getElementById('intro-name');
+  nameEl.textContent = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() + '.';
+
+  const els = ['intro-name','intro-headline','intro-fm','intro-tap'];
+  els.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.remove('go');void el.offsetWidth;el.classList.add('go');}
+  });
+}
+
+function triggerPlittAnims(){
+  const q=document.querySelector('.plitt-quote');
+  const a=document.querySelector('.plitt-attr');
+  const sk=document.querySelector('.plitt-skip');
+  [q,a,sk].forEach(el=>{ if(el){el.style.opacity='0';el.classList.remove('go');void el.offsetWidth;el.classList.add('go');}});
+  setTimeout(()=>{ if(currentScreen==='plitt'){plittSeen=true;goTo('h2');} },4500);
+}
+
+function triggerLockinAnims(){
+  document.querySelector('.lockin-eyebrow')?.classList.add('go');
+  document.querySelector('.lockin-headline')?.classList.add('go');
+  document.querySelector('.lockin-reassure')?.classList.add('go');
+  document.querySelectorAll('.lockin-card').forEach((c,i)=>{ setTimeout(()=>c.classList.add('go'),300+i*80); });
+  if(selectedHustle!==null){
+    setTimeout(()=>{
+      document.querySelectorAll('.lockin-card').forEach(c=>c.classList.remove('selected'));
+      document.querySelector(`.lockin-card[data-i="${selectedHustle}"]`)?.classList.add('selected');
+      document.getElementById('lockin-confirm').classList.add('active');
+    },500);
+  }
+}
+
+// ══════════════════════════════════
+// EDU EXAMPLE + INIT ANIMATIONS
+// ══════════════════════════════════
+const urlParams = new URLSearchParams(window.location.search);
+const urlHustle = urlParams.get('hustle') || 'social media';
+const examples = {
+  'social':{g:'Social media manager. 1 of thousands.',s:'Social media manager for independent Bengaluru café owners who have loyal regulars but no online presence — 1 of maybe 3 doing this specifically.'},
+  'copy':{g:'Copywriter. Available everywhere.',s:'Copywriter for D2C wellness brands launching their first product — someone who understands the customer because they are the customer.'},
+  'fitness':{g:'Fitness coach. 1 of 10,000.',s:'Fitness coach for competitive gamers and streamers improving posture, stamina and reaction time at home — 1 of maybe 5 in your city.'},
+  'graphic':{g:'Graphic designer. Cheap on every platform.',s:'Visual identity designer for content creators building a personal brand from scratch — someone who makes them look like they\'ve been doing this for years.'}
+};
+const eKey = Object.keys(examples).find(k=>urlHustle.toLowerCase().includes(k)) || 'fitness';
+const ex = examples[eKey];
+document.getElementById('edu-example-text').innerHTML = `<strong>Generic:</strong> ${ex.g}<br><strong>Your version:</strong> ${ex.s}`;
+
+// Stagger edu animations
+const eduSeq = [
+  {sel:'.edu-eyebrow',  d:100},
+  {sel:'.edu-headline', d:220},
+  {sel:'.edu-divider',  d:380},
+  {sel:'.edu-body',     d:460},
+  {sel:'.edu-example',  d:600},
+  {sel:'#edu-proceed',  d:740},
+];
+eduSeq.forEach(({sel,d})=>{
+  setTimeout(()=>document.querySelectorAll(sel).forEach(el=>el.classList.add('go')), d);
+});
+
+// updateHustleUI() called inside buildScreens() after Airtable data loads
+
+// ── CURSOR LIGHT (dark screens)
+(function(){
+  const canvas=document.getElementById('cursor-light');
+  const ctx=canvas.getContext('2d');
+  let mx=window.innerWidth/2,my=window.innerHeight/2,cx=mx,cy=my;
+  function resizeCL(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+  resizeCL(); window.addEventListener('resize',resizeCL);
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  document.addEventListener('touchmove',e=>{mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+  const darkScreens=['screen-intro','screen-plitt','screen-h0','screen-h1','screen-h2','screen-h3'];
+  function drawCL(){
+    cx+=(mx-cx)*.06; cy+=(my-cy)*.06;
+    const isDark=darkScreens.includes(currentScreen);
+    canvas.style.opacity=isDark?'1':'0';
+    if(isDark){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const g=ctx.createRadialGradient(cx,cy,0,cx,cy,400);
+      g.addColorStop(0,'rgba(232,230,224,0.07)');
+      g.addColorStop(0.5,'rgba(232,230,224,0.02)');
+      g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+    requestAnimationFrame(drawCL);
+  }
+  requestAnimationFrame(drawCL);
+})();
+
+// ── BREATHING on light screens (hustle screens are cream)
+(function(){
+  let t=Math.random()*Math.PI*2;
+  const lightScreens=['screen-h0','screen-h1','screen-h2','screen-h3','screen-lockin'];
+  function breath(){
+    t+=0.006;
+    const mix=(Math.sin(t)+1)/2;
+    const r=Math.round(232+(222-232)*mix);
+    const g=Math.round(230+(218-230)*mix);
+    const b=Math.round(224+(211-224)*mix);
+    const col=`rgb(${r},${g},${b})`;
+    lightScreens.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.backgroundColor=col;
+    });
+    requestAnimationFrame(breath);
+  }
+  requestAnimationFrame(breath);
+})();
+
+// ── EASTER EGG: Scroll up past top on hustle screen
+document.querySelectorAll('.hustle-screen').forEach(screen=>{
+  screen.addEventListener('scroll',()=>{
+    if(screen.scrollTop===0 && screen._wasScrolled){
+      screen._wasScrolled=false;
+      const el=document.createElement('div');
+      el.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(232,230,224,.95);color:#0A0A0A;padding:12px 20px;border-radius:10px;font-family:Space Grotesk,sans-serif;font-size:11px;letter-spacing:.08em;z-index:9998;opacity:0;transition:opacity .3s ease;white-space:nowrap;';
+      el.textContent=`There\'s nothing back there. Keep going.`;
+      document.body.appendChild(el);
+      requestAnimationFrame(()=>el.style.opacity='1');
+      setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),400); },2000);
+    }
+    if(screen.scrollTop>10) screen._wasScrolled=true;
+  },{passive:true});
+});
+
+// ── EASTER EGG: Logo 5x click
+let lc=0,lt;
+document.querySelector(".nav-logo")?.addEventListener("click",()=>{
+  lc++; clearTimeout(lt); lt=setTimeout(()=>lc=0,1500);
+  if(lc>=5){
+    lc=0;
+    const quotes=["The clock is ticking. Are you becoming the person you want to be?","You got one life. Why wait until tomorrow to start it?","Success doesn\'t know cold or early or tired. It just knows if you showed up."];
+    const q=quotes[Math.floor(Math.random()*quotes.length)];
+    const el=document.createElement("div");
+    el.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(232,230,224,.95);color:#0A0A0A;padding:16px 24px;border-radius:12px;font-family:Space Grotesk,sans-serif;font-size:12px;max-width:360px;text-align:center;z-index:9998;opacity:0;transition:opacity .4s ease;line-height:1.6;";
+    el.textContent=q;
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.style.opacity="1");
+    setTimeout(()=>{ el.style.opacity="0"; setTimeout(()=>el.remove(),500); },2500);
+  }
+});
+
+// ── EDU BACKGROUND STATIC (continuous, very dark)
+const eduStatic = document.getElementById('edu-static');
+const eduCtx = eduStatic.getContext('2d');
+let eduStaticOffset = 0;
+
+function resizeEduStatic(){
+  eduStatic.width  = window.innerWidth;
+  eduStatic.height = window.innerHeight;
+}
+resizeEduStatic();
+window.addEventListener('resize', resizeEduStatic);
+
+function drawEduStatic(){
+  const W = eduStatic.width, H = eduStatic.height;
+  eduStaticOffset += 1.8;
+  eduCtx.clearRect(0,0,W,H);
+
+  // Draw horizontal static lines scrolling right
+  // Each line has its own speed and brightness, drifting rightward
+  for(let y=0; y<H; y+=2){
+    // Each line gets a unique offset based on row — makes them feel independent
+    const rowSeed = (y * 137 + Math.floor(eduStaticOffset * (0.8 + (y%7)*0.1))) % W;
+    const brightness = 12 + Math.random()*18;
+    const lineOpacity = 0.18 + Math.random()*0.22;
+
+    // Line is a series of bright segments that repeat and scroll
+    eduCtx.globalAlpha = lineOpacity;
+    eduCtx.fillStyle = `rgb(${brightness},${brightness},${brightness})`;
+
+    // Draw the scrolling noise segments for this line
+    let x = -(rowSeed % 80);
+    while(x < W){
+      const segW = 8 + Math.random()*40;
+      const gap  = 4 + Math.random()*30;
+      if(Math.random() > 0.35){
+        const b = Math.floor(brightness + Math.random()*40);
+        eduCtx.fillStyle = `rgb(${b},${b},${b})`;
+        eduCtx.fillRect(x, y, segW, 1);
+      }
+      x += segW + gap;
+    }
+  }
+
+  eduCtx.globalAlpha = 1;
+
+  // Scanlines — dark gaps between every 2 rows for the TV line feel
+  eduCtx.fillStyle = 'rgba(0,0,0,0.45)';
+  for(let y=1; y<H; y+=2) eduCtx.fillRect(0,y,W,1);
+
+  // Single bright horizontal band drifting downward slowly (VHS pause shimmer)
+  const bandY = ((eduStaticOffset * 0.6) % (H + 80)) - 40;
+  const bg = eduCtx.createLinearGradient(0,bandY-20,0,bandY+20);
+  bg.addColorStop(0,'transparent');
+  bg.addColorStop(0.5,'rgba(255,255,255,0.07)');
+  bg.addColorStop(1,'transparent');
+  eduCtx.fillStyle = bg;
+  eduCtx.fillRect(0, bandY-20, W, 40);
+
+  requestAnimationFrame(drawEduStatic);
+}
+drawEduStatic();
+</script>
+</body>
+</html>

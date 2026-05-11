@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Space Grotesk',sans-serif;cursor:none;}
+
+#cursor{
+  position:fixed;width:10px;height:10px;background:var(--cream);border-radius:50%;
+  pointer-events:none;z-index:99999;transform:translate(-50%,-50%);
+  mix-blend-mode:difference;transition:width .15s,height .15s;
+}
+#cursor.big{width:40px;height:40px;}
+
+#entry{
+  position:fixed;inset:0;background:var(--black);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:100;overflow:hidden;transform-origin:50% 50%;
+}
+#grain{
+  position:absolute;inset:-50%;width:200%;height:200%;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  opacity:.3;animation:grain .35s steps(1) infinite;pointer-events:none;
+}
+@keyframes grain{
+  0%,100%{transform:translate(0,0)}10%{transform:translate(-3%,-4%)}20%{transform:translate(4%,2%)}
+  30%{transform:translate(-2%,5%)}40%{transform:translate(3%,-3%)}50%{transform:translate(-4%,3%)}
+  60%{transform:translate(2%,-5%)}70%{transform:translate(-3%,4%)}80%{transform:translate(4%,-2%)}90%{transform:translate(-2%,3%)}
+}
+
+#crack-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:20;}
+
+#title-wrap{
+  position:relative;z-index:10;display:flex;flex-direction:column;
+  align-items:center;user-select:none;pointer-events:none;
+}
+.word{display:flex;gap:.01em;}
+.letter{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(90px,17vw,210px);
+  color:var(--cream);line-height:.88;display:inline-block;
+  position:relative;letter-spacing:-.01em;
+  transition:color .08s,filter .08s,transform .1s;
+  pointer-events:auto;cursor:none;
+}
+.letter.h1{color:#C8C6C0;transform:rotate(-1deg) translateY(1px);}
+.letter.h2{color:#909088;transform:rotate(2.5deg) translateY(-3px) skewX(-2deg);filter:blur(.4px);}
+.letter.h3{color:#505048;transform:rotate(-4deg) translateY(5px) skewX(4deg) scale(.96);filter:blur(.8px);}
+.letter.h4{color:#282820;transform:rotate(6deg) translateY(-7px) skewX(-8deg) scale(.92);opacity:.4;filter:blur(1.5px);}
+
+.ripple{
+  position:fixed;border-radius:50%;background:rgba(232,230,224,.07);
+  pointer-events:none;z-index:201;
+  transform:translate(-50%,-50%) scale(0);
+  animation:ripOut .7s ease forwards;
+}
+@keyframes ripOut{to{transform:translate(-50%,-50%) scale(14);opacity:0;}}
+
+.trail{position:fixed;border-radius:50%;background:var(--cream);pointer-events:none;z-index:9990;transform:translate(-50%,-50%);}
+
+#entry-hint{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  color:var(--muted);font-size:11px;letter-spacing:.28em;text-transform:uppercase;font-weight:300;
+  opacity:0;animation:fadeUp .8s ease 1.1s forwards;pointer-events:none;
+}
+#hit-counter{
+  position:absolute;top:36px;right:40px;
+  color:var(--muted);font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:300;
+  opacity:0;animation:fadeUp .8s ease 1.2s forwards;transition:color .3s;pointer-events:none;
+}
+#hit-counter.almost{color:var(--cream);}
+@keyframes fadeUp{to{opacity:1;}}
+
+/* VOID */
+#void{
+  position:fixed;inset:0;z-index:150;
+  background:radial-gradient(ellipse at 50% 60%,#0d0d0d 0%,#000 100%);
+  opacity:0;pointer-events:none;overflow:hidden;
+}
+#void.active{opacity:1;pointer-events:auto;transition:opacity .3s ease;}
+#void-glow{
+  position:absolute;bottom:-30%;left:50%;transform:translateX(-50%);
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,230,224,.28) 0%,rgba(232,230,224,.07) 50%,transparent 70%);
+  opacity:0;transition:opacity .6s ease,width 1.4s ease,height 1.4s ease,bottom 1.4s ease;
+}
+#void-glow.rising{opacity:1;width:1000px;height:1000px;bottom:-5%;}
+.void-star{position:absolute;border-radius:50%;background:rgba(232,230,224,.8);pointer-events:none;}
+
+/* LANDING */
+#landing{
+  position:fixed;inset:0;z-index:200;background:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:scale(0.08);opacity:0;transition:none;overflow:hidden;border-radius:50%;
+}
+#landing.arriving{
+  transition:transform 1s cubic-bezier(.22,1,.36,1),opacity .35s ease,border-radius .9s ease;
+  transform:scale(1);opacity:1;border-radius:0;
+}
+#landing::before{
+  content:'';position:absolute;inset:-50%;width:200%;height:200%;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;
+}
+@keyframes landImpact{
+  0%{transform:scale(1);}
+  30%{transform:scale(1.012);}
+  65%{transform:scale(.997);}
+  100%{transform:scale(1);}
+}
+#landing.impact{animation:landImpact .55s ease forwards;}
+/* LANDING SCROLL */
+#landing-scroll{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.l-nav{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;position:sticky;top:0;background:var(--cream);z-index:10;border-bottom:1px solid var(--divider);}
+.l-nav-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;color:var(--black);}
+.l-nav-time{font-size:11px;letter-spacing:.1em;color:var(--cream);font-weight:300;background:var(--black);padding:8px 14px;border-radius:50px;}
+.l-hero{padding:48px 24px 56px;}
+.l-headline{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,12vw,110px);color:var(--black);line-height:.9;letter-spacing:-.01em;margin-bottom:24px;}
+.l-hero-sub{font-size:13px;color:var(--secondary);font-weight:300;line-height:1.7;max-width:400px;margin-bottom:36px;}
+.l-cta{
+  display:inline-block;background:var(--black);color:var(--cream);border:none;
+  padding:16px 40px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:700;cursor:none;
+  position:relative;overflow:hidden;
+  transition:transform .3s ease,box-shadow .3s ease;
+  opacity:0;transform:translateY(16px);
+}
+.l-cta.l-cta-hero{background:#fff;color:var(--black);box-shadow:0 4px 20px rgba(0,0,0,.08);}
+.l-cta.l-cta-hero:hover{box-shadow:0 8px 32px rgba(0,0,0,.14)!important;}
+.l-cta.visible{opacity:1;transform:translateY(0);}
+.l-cta:hover{transform:translateY(-2px)!important;box-shadow:0 10px 32px rgba(10,10,10,.15);}
+.l-section{padding:0 24px 56px;}
+.l-section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,60px);color:var(--black);text-align:center;margin-bottom:28px;letter-spacing:.01em;}
+.l-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:500px){.l-cards{grid-template-columns:1fr;}}
+.l-card{
+  background:var(--black);color:var(--cream);
+  border-radius:20px;padding:20px;
+  opacity:0;transform:translateY(24px);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.l-card.visible{opacity:1;transform:translateY(0);}
+.l-card-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px;line-height:1.3;}
+.l-card p{font-size:12px;line-height:1.75;color:rgba(232,230,224,.75);font-weight:300;}
+.l-quote-section{padding:0 24px 80px;}
+.l-quote-card{background:var(--black);border-radius:20px;padding:28px;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+.l-quote-card.visible{opacity:1;transform:translateY(0);}
+.l-quote-text{font-size:14px;color:var(--cream);line-height:1.7;font-weight:300;margin-bottom:10px;}
+.l-quote-author{font-size:12px;color:rgba(232,230,224,.5);margin-bottom:24px;letter-spacing:.05em;}
+.l-quote-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.l-handle{font-size:12px;color:rgba(232,230,224,.5);letter-spacing:.05em;}
+.l-cta-inline{opacity:1!important;transform:none!important;margin-top:0!important;}
+/* landed animations */
+.landed .l-headline{animation:landIn .7s cubic-bezier(.22,1,.36,1) .1s forwards;}
+.landed .l-hero-sub{animation:landIn .7s cubic-bezier(.22,1,.36,1) .25s forwards;}
+@keyframes landIn{to{opacity:1;transform:translateY(0);}}
+.scroll-hint{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transition:opacity .8s ease;pointer-events:none;z-index:210;}
+.scroll-hint span{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);}
+.scroll-dot{width:4px;height:4px;background:var(--muted);border-radius:50%;animation:sb 1.6s ease infinite;}
+@keyframes sb{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(7px);opacity:1}}
+.l-headline{opacity:0;transform:translateY(32px);}
+.l-hero-sub{opacity:0;transform:translateY(16px);}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<canvas id="cursor-light" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;"></canvas>
+<div id="entry">
+  <div id="grain"></div>
+  <canvas id="crack-canvas"></canvas>
+  <div id="title-wrap">
+    <div class="word" id="word1"></div>
+    <div class="word" id="word2"></div>
+  </div>
+  <div id="entry-hint">Strike to break through</div>
+  <div id="hit-counter">0 / 20</div>
+</div>
+<div id="void"><div id="void-glow"></div></div>
+<div id="landing">
+  <div id="landing-scroll">
+    <section class="l-hero">
+      <div class="l-nav">
+        <span class="l-nav-logo">FIRST MOVE</span>
+        <span class="l-nav-time" id="l-clock"></span>
+      </div>
+      <div style="padding:48px 24px 56px;">
+        <h1 class="l-headline">While they wait,<br>you move.</h1>
+        <p class="l-hero-sub">Every second you spend deciding is a second someone else is already working. You don't need more time. You need the right direction. This is it. Right now.</p>
+        <button class="l-cta l-cta-hero" id="cta-btn">Find My Move</button>
+      </div>
+    </section>
+    <section class="l-section">
+      <h2 class="l-section-title">What this is</h2>
+      <div class="l-cards">
+        <div class="l-card"><div class="l-card-title">Built around you. Not the average.</div><p>Generic advice is for people who want generic results. First Move asks the questions nobody else asks — your skills, your city, your hours, your language. What comes out the other side isn't a list. It's a plan that was made for the exact person you are right now.</p></div>
+        <div class="l-card"><div class="l-card-title">Not inspiration. Moves.</div><p>You've read the threads. You've watched the videos. You still haven't started. That's not a motivation problem — that's a clarity problem. First Move gives you the first three moves so clearly that the only thing left between you and starting is choosing to go.</p></div>
+        <div class="l-card"><div class="l-card-title">Honest before it's kind.</div><p>Before you get your recommendations, First Move checks where you actually stand. Not to gatekeep — to protect you. Dropping you into the deep end before you can swim helps nobody. If there's a gap, you'll know exactly what it is and exactly how to close it.</p></div>
+        <div class="l-card"><div class="l-card-title">You earn every step.</div><p>Nothing is handed to you here. Each stage unlocks when you've done the work to earn it — niche, tools, first client, mission. By the time you reach the end, you're not reading about starting. You're already in motion.</p></div>
+      </div>
+    </section>
+    <section class="l-quote-section">
+      <div class="l-quote-card">
+        <p class="l-quote-text">"The road to success is a very lonely road. You're not gonna see too many friends. It's only you with your shadow. Once you get there, many people will love you, also many people will hate you. Because your success is a huge spotlight, shining on their failures."</p>
+        <p class="l-quote-author">— Greg Plitt</p>
+        <div class="l-quote-bottom">
+          <span class="l-handle">@firstmove.in</span>
+          <button class="l-cta l-cta-inline l-cta-hero" id="cta-btn-2">Find My Move</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="scroll-hint" id="scroll-hint"><span>Scroll</span><div class="scroll-dot"></div></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CANVAS CRACK SYSTEM — bullet hole / windshield style
+// Each impact: dark hole at center, thick wedge shards
+// around it, then 6-8 long sparse cracks radiating out
+// ══════════════════════════════════════════════════
+const canvas = document.getElementById('crack-canvas');
+const ctx = canvas.getContext('2d');
+const crackSystems = [];  // declared first — no hoisting issues
+let W, H, animFrame;
+
+function resizeCanvas(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  redrawAll();
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── Build one impact system at (ox,oy)
+// phase 0-1: hairline only, no hole, 2-3 short arms, faint
+// phase 2-3: medium cracks, tiny hole appears
+// phase 4+: full destruction, deep arms, big hole, offshoots everywhere
+function addImpact(ox, oy, intensity){
+  intensity = intensity || 1;
+  const arms = [];
+
+  // Scale everything to phase
+  const phase = Math.min(intensity, 4); // 0.5 → 4
+  const isHairline = phase < 1.2;
+  const isMedium   = phase >= 1.2 && phase < 2.5;
+  const isHeavy    = phase >= 2.5;
+
+  // Number of arms: 2-3 hairline, 4-6 medium, 6-9 heavy
+  const numArms = isHairline ? (2 + Math.floor(Math.random()*2))
+                : isMedium   ? (4 + Math.floor(Math.random()*2))
+                :               (6 + Math.floor(Math.random()*3));
+
+  // Arm length: very short hairlines, grows with phase
+  const baseLen = isHairline ? W * .04 + Math.random() * W * .05
+                : isMedium   ? W * .08 + Math.random() * W * .10
+                :               W * .16 + Math.random() * W * .18;
+
+  const baseAngleOffset = Math.random() * Math.PI * 2;
+  for(let i = 0; i < numArms; i++){
+    const angle = baseAngleOffset + (i / numArms) * Math.PI * 2 + (Math.random() - .5) * .7;
+    arms.push(buildArm(ox, oy, angle, baseLen, phase));
+  }
+
+  // No holes — hammer strike cracks only
+  const holeR = 0;
+
+  // Line opacity: faint at first, bright at end
+  const opacity = isHairline ? .25 + Math.random() * .15
+                : isMedium   ? .45 + Math.random() * .15
+                :               .65 + Math.random() * .2;
+
+  crackSystems.push({ ox, oy, arms, holeR, intensity: phase, opacity, progress: 0, startTime: Date.now() });
+  runAnim();
+}
+
+// ── Build one arm: a main crack + offshoots (more at higher intensity)
+function buildArm(ox, oy, angle, length, phase){
+  const mainCrack = traceCrack(ox, oy, angle, length, phase);
+  const offshoots = [];
+
+  // Hairline: no offshoots. Medium: maybe 1. Heavy: 1-2
+  const numOff = phase < 1.2 ? 0
+               : phase < 2.5 ? (Math.random() > .6 ? 1 : 0)
+               :                (Math.random() > .4 ? 2 : 1);
+
+  for(let i = 0; i < numOff; i++){
+    const tPts = mainCrack.pts;
+    const idx = Math.floor(tPts.length * (.3 + Math.random() * .4));
+    const pt = tPts[Math.min(idx, tPts.length - 1)];
+    const offAngle = angle + (Math.random() > .5 ? 1 : -1) * (.3 + Math.random() * .5);
+    const offLen = length * (.3 + Math.random() * .3);
+    offshoots.push(traceCrack(pt.x, pt.y, offAngle, offLen, phase));
+  }
+
+  return { main: mainCrack, offshoots };
+}
+
+// ── Trace a single crack — more drift/jaggedness at high intensity
+function traceCrack(sx, sy, angle, length, phase){
+  const pts = [{ x: sx, y: sy }];
+  // hairlines are smoother, heavy cracks are more jagged
+  const numSegs = phase < 1.2 ? (3 + Math.floor(Math.random()*2))
+                :                (4 + Math.floor(Math.random()*5));
+  const drift = phase < 1.2 ? .15 : phase < 2.5 ? .28 : .42;
+  let cx = sx, cy = sy, ca = angle;
+  const segLen = length / numSegs;
+
+  for(let s = 0; s < numSegs; s++){
+    ca += (Math.random() - .5) * drift;
+    cx += Math.cos(ca) * segLen;
+    cy += Math.sin(ca) * segLen;
+    pts.push({ x: cx, y: cy });
+  }
+  return { pts, angle };
+}
+
+// ── Animation loop
+function runAnim(){
+  cancelAnimationFrame(animFrame);
+  function frame(){
+    const now = Date.now();
+    let stillGoing = false;
+    crackSystems.forEach(sys => {
+      const elapsed = now - sys.startTime;
+      sys.progress = Math.min(1, elapsed / 500); // 500ms to fully draw
+      if(sys.progress < 1) stillGoing = true;
+    });
+    redrawAll();
+    if(stillGoing) animFrame = requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Draw everything
+function redrawAll(){
+  ctx.clearRect(0, 0, W, H);
+  crackSystems.forEach(sys => drawImpact(sys));
+}
+
+function drawImpact(sys){
+  const { ox, oy, arms, holeR, intensity, opacity, progress } = sys;
+  const lineWidth = intensity < 1.2 ? .6 : intensity < 2.5 ? 1.2 : 1.8;
+
+  // Small bright impact dot — hammer strike point, not a hole
+  if(progress > .05){
+    const dotR = 2 + intensity * .8;
+    const impactGrd = ctx.createRadialGradient(ox, oy, 0, ox, oy, dotR * 3);
+    impactGrd.addColorStop(0, `rgba(232,230,224,${opacity})`);
+    impactGrd.addColorStop(0.5, `rgba(232,230,224,${opacity * .4})`);
+    impactGrd.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(ox, oy, dotR * 3, 0, Math.PI * 2);
+    ctx.fillStyle = impactGrd;
+    ctx.fill();
+  }
+
+  // Draw each arm
+  arms.forEach(arm => {
+    drawCrackLine(arm.main, progress, lineWidth, opacity);
+    arm.offshoots.forEach(off => {
+      const offProgress = Math.max(0, (progress - .3) / .7);
+      drawCrackLine(off, offProgress, lineWidth * .6, opacity * .7);
+    });
+  });
+
+  // No hole for hairline hits — only medium and heavy
+  if(holeR > 0 && progress > .15){
+    const holeProgress = Math.min(1, (progress - .15) / .45);
+    const r = holeR * holeProgress;
+
+    ctx.beginPath();
+    ctx.arc(ox, oy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(ox, oy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(232,230,224,${opacity * .8 * holeProgress})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Glow only on heavy hits
+    if(intensity >= 2.5){
+      const grd = ctx.createRadialGradient(ox, oy, r, ox, oy, r + 18);
+      grd.addColorStop(0, `rgba(232,230,224,${.12 * holeProgress})`);
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(ox, oy, r + 18, 0, Math.PI * 2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+    }
+  }
+
+  // No wedge shards — hammer strike style only
+}
+
+// ── Draw one crack line with progress (0→1 reveals it)
+function drawCrackLine(crack, progress, width, opacity){
+  if(progress <= 0) return;
+  const pts = crack.pts;
+  if(pts.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+
+  const drawTo = progress * (pts.length - 1);
+  for(let i = 1; i < pts.length; i++){
+    if(i <= drawTo){
+      ctx.lineTo(pts[i].x, pts[i].y);
+    } else if(i - 1 < drawTo){
+      const frac = drawTo - (i - 1);
+      ctx.lineTo(
+        pts[i-1].x + (pts[i].x - pts[i-1].x) * frac,
+        pts[i-1].y + (pts[i].y - pts[i-1].y) * frac
+      );
+      break;
+    }
+  }
+
+  // Soft glow underneath
+  ctx.strokeStyle = `rgba(232,230,224,${opacity * .25})`;
+  ctx.lineWidth = width + 3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Sharp bright crack
+  ctx.strokeStyle = `rgba(232,230,224,${opacity})`;
+  ctx.lineWidth = width;
+  ctx.stroke();
+
+  // Very thin highlight
+  ctx.strokeStyle = `rgba(255,255,255,${opacity * .35})`;
+  ctx.lineWidth = width * .25;
+  ctx.stroke();
+}
+
+// ── Wedge-shaped shard pieces around the impact hole
+// These are the thick glass shards you see in the reference
+function drawShardWedges(ox, oy, holeR, arms, progress){
+  const wedgeProgress = Math.min(1, (progress - .2) / .5);
+  if(wedgeProgress <= 0) return;
+
+  arms.forEach((arm, i) => {
+    const nextArm = arms[(i + 1) % arms.length];
+    const a1 = arm.main.angle;
+    const a2 = nextArm.main.angle;
+    // use a stable jitter seeded from index, not Math.random() every frame
+    const jitter = ((i * 137.5) % 1 - .5) * .3;
+    const innerR = holeR * wedgeProgress;
+    const outerR = (holeR * 2.2 + (i % 3) * holeR * .5) * wedgeProgress;
+    const midAngle = (a1 + a2) / 2;
+
+    const x1   = ox + Math.cos(a1) * innerR;
+    const y1   = oy + Math.sin(a1) * innerR;
+    const x2   = ox + Math.cos(a2) * innerR;
+    const y2   = oy + Math.sin(a2) * innerR;
+    const xMid = ox + Math.cos(midAngle + jitter) * outerR;
+    const yMid = oy + Math.sin(midAngle + jitter) * outerR;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(xMid, yMid);
+    ctx.lineTo(x2, y2);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(232,230,224,${.04 * wedgeProgress})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(232,230,224,${.3 * wedgeProgress})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+}
+
+// ══════════════════════════════════════════════════
+// LETTERS
+// ══════════════════════════════════════════════════
+const WORDS = ['FIRST','MOVE'], IDS = ['word1','word2'];
+const HITS_NEEDED = 20, MAX_PER = 4;
+let totalHits = 0, lHits = {}, gone = false;
+
+WORDS.forEach((w, wi) => {
+  const el = document.getElementById(IDS[wi]);
+  [...w].forEach((c, ci) => {
+    const s = document.createElement('span');
+    s.className = 'letter'; s.dataset.id = `${wi}-${ci}`; s.textContent = c;
+    lHits[`${wi}-${ci}`] = 0; el.appendChild(s);
+  });
+});
+
+// ══════════════════════════════════════════════════
+// CURSOR + TRAIL
+// ══════════════════════════════════════════════════
+const cursor = document.getElementById('cursor');
+let mx = window.innerWidth/2, my = window.innerHeight/2;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx+'px'; cursor.style.top = my+'px';
+  if(!gone) spawnTrail(mx, my);
+});
+document.addEventListener('mouseover', e => {
+  cursor.classList.toggle('big', !!e.target?.closest('.letter') || e.target?.id === 'cta-btn');
+});
+document.addEventListener('touchmove', e => {
+  cursor.style.left = e.touches[0].clientX+'px';
+  cursor.style.top  = e.touches[0].clientY+'px';
+}, { passive: true });
+
+function spawnTrail(x, y){
+  const d = document.createElement('div'); d.className = 'trail';
+  const sz = Math.random()*3 + 1.5;
+  d.style.cssText = `left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;opacity:.4;transition:opacity .5s;`;
+  document.body.appendChild(d);
+  setTimeout(() => d.style.opacity = '0', 30);
+  setTimeout(() => d.remove(), 600);
+}
+
+// ══════════════════════════════════════════════════
+// SCREEN SHAKE
+// ══════════════════════════════════════════════════
+let shakeRAF, shakeMag = 0;
+function shake(magnitude, duration){
+  duration = duration || 400;
+  shakeMag = Math.max(shakeMag, magnitude);
+  const entry = document.getElementById('entry');
+  const start = Date.now();
+  cancelAnimationFrame(shakeRAF);
+  function shakeFrame(){
+    const p = (Date.now() - start) / duration;
+    const m = shakeMag * (1 - Math.pow(p, .5));
+    if(p >= 1 || m < .3){ entry.style.transform = 'none'; shakeMag = 0; return; }
+    entry.style.transform = `translate(${(Math.random()-.5)*2*m}px,${(Math.random()-.5)*2*m}px) rotate(${(Math.random()-.5)*m*.1}deg)`;
+    shakeRAF = requestAnimationFrame(shakeFrame);
+  }
+  shakeRAF = requestAnimationFrame(shakeFrame);
+}
+
+// ══════════════════════════════════════════════════
+// RIPPLE
+// ══════════════════════════════════════════════════
+function spawnRipple(x, y){
+  const r = document.createElement('div'); r.className = 'ripple';
+  r.style.cssText = `left:${x}px;top:${y}px;width:50px;height:50px;`;
+  document.body.appendChild(r); setTimeout(() => r.remove(), 800);
+}
+
+// ══════════════════════════════════════════════════
+// FLYING GLASS SHARDS (DOM, for letter explosions)
+// ══════════════════════════════════════════════════
+function spawnFlyingShards(cx, cy, count){
+  count = count || 12;
+  const shapePolys = [
+    '50% 0%,100% 60%,80% 100%,20% 95%,0% 55%',
+    '30% 0%,100% 15%,95% 85%,5% 90%',
+    '50% 0%,100% 40%,70% 100%,0% 70%,10% 20%',
+    '20% 0%,100% 10%,100% 100%,0% 80%',
+    '60% 0%,100% 50%,50% 100%,0% 40%,15% 5%'
+  ];
+  for(let i = 0; i < count; i++){
+    const sh = document.createElement('div');
+    const sz = 10 + Math.random() * 30;
+    const angle = (i / count) * Math.PI * 2 + (Math.random()-.5) * 1.2;
+    const dist = 80 + Math.random() * 260;
+    const tx = Math.cos(angle) * dist;
+    const ty = Math.sin(angle) * dist;
+    const rot = Math.random() * 720 - 360;
+    sh.style.cssText = `
+      position:fixed;z-index:300;pointer-events:none;
+      left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;
+      background:linear-gradient(135deg,rgba(232,230,224,.85),rgba(180,178,172,.5));
+      border:1px solid rgba(232,230,224,.3);
+      box-shadow:inset 0 0 5px rgba(255,255,255,.15);
+      clip-path:polygon(${shapePolys[Math.floor(Math.random()*shapePolys.length)]});
+      transform:translate(-50%,-50%) rotate(${Math.random()*20-10}deg);
+      transition:transform ${.7+Math.random()*.5}s cubic-bezier(.22,1,.36,1),opacity ${.5+Math.random()*.3}s ease .15s;
+    `;
+    document.body.appendChild(sh);
+    requestAnimationFrame(() => {
+      sh.style.transform = `translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) rotate(${rot}deg) scale(.1)`;
+      sh.style.opacity = '0';
+    });
+    setTimeout(() => sh.remove(), 1400);
+  }
+}
+
+// ══════════════════════════════════════════════════
+// COUNTER
+// ══════════════════════════════════════════════════
+function updateCounter(){
+  const el = document.getElementById('hit-counter');
+  const remaining = HITS_NEEDED - Math.min(totalHits, HITS_NEEDED);
+  if(remaining > 10) el.textContent = `${Math.min(totalHits, HITS_NEEDED)} / ${HITS_NEEDED}`;
+  else if(remaining > 5) el.textContent = `${remaining} more`;
+  else if(remaining > 1) el.textContent = `${remaining}...`;
+  else if(remaining === 1) el.textContent = `ONE MORE`;
+  else el.textContent = ``;
+  if(totalHits >= HITS_NEEDED * .55) el.classList.add('almost');
+}
+
+// ══════════════════════════════════════════════════
+// HIT HANDLER
+// ══════════════════════════════════════════════════
+function handleHit(e){
+  if(gone) return;
+  const x = e.clientX ?? e.touches?.[0]?.clientX ?? mx;
+  const y = e.clientY ?? e.touches?.[0]?.clientY ?? my;
+
+  spawnRipple(x, y);
+  // Phase mapping: 0-6 = hairline, 7-13 = medium, 14+ = heavy
+  const phase = totalHits < 7  ? .5 + (totalHits / 7) * .7        // 0.5 → 1.2
+              : totalHits < 14 ? 1.2 + ((totalHits-7) / 7) * 1.3  // 1.2 → 2.5
+              :                  2.5 + ((totalHits-14) / 6) * 1.5; // 2.5 → 4.0
+  addImpact(x, y, phase);
+
+  const target = e.target?.closest?.('.letter');
+  if(target){
+    const id = target.dataset.id;
+    lHits[id] = (lHits[id] || 0) + 1;
+    const h = lHits[id];
+    totalHits++;
+    target.classList.remove('h1','h2','h3','h4');
+    if(h < MAX_PER){
+      target.classList.add(`h${h}`);
+      // shake scales with both letter damage AND global phase
+      const shakeMagnitude = phase < 1.2 ? 3 + h*2 : phase < 2.5 ? 8 + h*4 : 16 + h*6;
+      shake(shakeMagnitude, 200 + h*60);
+    } else {
+      spawnFlyingShards(x, y, 14);
+      shake(32, 650);
+      target.style.transition = 'transform .2s ease,opacity .15s ease';
+      target.style.transform = `scale(0) rotate(${Math.random()*80-40}deg)`;
+      target.style.opacity = '0';
+      setTimeout(() => target.style.visibility = 'hidden', 220);
+      totalHits += 4;
+    }
+  } else {
+    totalHits++;
+    shake(5 + intensity * 5, 240);
+  }
+
+  updateCounter();
+  if(totalHits >= HITS_NEEDED) setTimeout(triggerBreak, 140);
+}
+
+document.getElementById('entry').addEventListener('click', handleHit);
+document.getElementById('entry').addEventListener('touchstart', e => {
+  e.preventDefault(); handleHit(e);
+}, { passive: false });
+document.addEventListener('keydown', e => {
+  if(gone || (e.code !== 'Space' && e.code !== 'Enter')) return;
+  totalHits += 2;
+  addImpact(W/2 + (Math.random()-.5)*200, H/2 + (Math.random()-.5)*200, 1.4);
+  shake(14, 350); updateCounter();
+  if(totalHits >= HITS_NEEDED) setTimeout(triggerBreak, 140);
+});
+
+// ══════════════════════════════════════════════════
+// SCREEN SHATTER PIECES (DOM overlay)
+// ══════════════════════════════════════════════════
+function spawnScreenShatter(){
+  const cols = 5, rows = 6;
+  const tw = W/cols, th = H/rows;
+  for(let r = 0; r < rows; r++){
+    for(let c = 0; c < cols; c++){
+      const piece = document.createElement('div');
+      const jit = () => (Math.random()-.5)*20;
+      piece.style.cssText = `
+        position:fixed;z-index:130;
+        left:${c*tw}px;top:${r*th}px;
+        width:${tw+1}px;height:${th+1}px;
+        background:var(--black);
+        clip-path:polygon(${jit()+8}px ${jit()+8}px,${tw+jit()-8}px ${jit()+8}px,${tw+jit()-4}px ${th+jit()-4}px,${jit()+4}px ${th+jit()-4}px);
+        border:1px solid rgba(232,230,224,.06);
+      `;
+      document.body.appendChild(piece);
+      const cx = c/cols - .5, cy = r/rows - .5;
+      const tx = cx * (400 + Math.random()*200) + (Math.random()-.5)*100;
+      const ty = cy * (350 + Math.random()*200) + Math.random()*300;
+      const rot = Math.random()*360 - 180;
+      const delay = 40 + Math.random()*180;
+      setTimeout(() => {
+        piece.style.transition = `transform 1s cubic-bezier(.22,1,.36,1) ${delay}ms,opacity .6s ease ${delay+80}ms`;
+        piece.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg) scale(${.15+Math.random()*.25})`;
+        piece.style.opacity = '0';
+        setTimeout(() => piece.remove(), 1400+delay);
+      }, 20);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════
+// FALL STREAKS — air rushing past as you drop
+// ══════════════════════════════════════════════════
+function spawnFallStreaks(){
+  const voidEl = document.getElementById('void');
+  const count = 28;
+  for(let i = 0; i < count; i++){
+    setTimeout(() => {
+      const streak = document.createElement('div');
+      const x = Math.random() * window.innerWidth;
+      const len = 40 + Math.random() * 120;
+      const opacity = 0.08 + Math.random() * 0.18;
+      const dur = 180 + Math.random() * 280;
+      const startY = -len;
+      streak.style.cssText = `
+        position:absolute;
+        left:${x}px;
+        top:${startY}px;
+        width:1px;
+        height:${len}px;
+        background:linear-gradient(to bottom, transparent, rgba(232,230,224,${opacity}), transparent);
+        pointer-events:none;
+        z-index:5;
+        transition:top ${dur}ms linear, opacity 100ms ease;
+      `;
+      voidEl.appendChild(streak);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          streak.style.top = (window.innerHeight + len) + 'px';
+          setTimeout(() => streak.remove(), dur + 200);
+        });
+      });
+    }, i * 38);
+  }
+  // Second wave — streaks accelerate as you fall faster
+  setTimeout(() => {
+    for(let i = 0; i < 20; i++){
+      setTimeout(() => {
+        const streak = document.createElement('div');
+        const x = Math.random() * window.innerWidth;
+        const len = 80 + Math.random() * 200;
+        const opacity = 0.12 + Math.random() * 0.22;
+        const dur = 100 + Math.random() * 150;
+        streak.style.cssText = `
+          position:absolute;
+          left:${x}px;
+          top:${-len}px;
+          width:1px;
+          height:${len}px;
+          background:linear-gradient(to bottom, transparent, rgba(232,230,224,${opacity}), transparent);
+          pointer-events:none;
+          z-index:5;
+          transition:top ${dur}ms linear;
+        `;
+        voidEl.appendChild(streak);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            streak.style.top = (window.innerHeight + len) + 'px';
+            setTimeout(() => streak.remove(), dur + 200);
+          });
+        });
+      }, i * 25);
+    }
+  }, 500);
+}
+
+// ══════════════════════════════════════════════════
+// THE FINAL BREAK
+// ══════════════════════════════════════════════════
+function triggerBreak(){
+  if(gone) return;
+  gone = true;
+
+  // Smash all remaining letters
+  document.querySelectorAll('.letter').forEach(l => {
+    if(l.style.visibility !== 'hidden'){
+      const r = l.getBoundingClientRect();
+      spawnFlyingShards(r.left + r.width/2, r.top + r.height/2, 16);
+      l.style.transition = 'transform .25s ease,opacity .2s ease';
+      l.style.transform = `scale(0) rotate(${Math.random()*90-45}deg)`;
+      l.style.opacity = '0';
+    }
+  });
+
+  // 6 simultaneous blast points across the screen
+  const blasts = [
+    [W*.5, H*.5], [W*.25, H*.3], [W*.75, H*.3],
+    [W*.2, H*.7], [W*.8, H*.7], [W*.5, H*.2]
+  ];
+  blasts.forEach(([bx, by], i) => {
+    setTimeout(() => addImpact(bx, by, 2.5 + Math.random()), i * 80);
+  });
+
+  // Escalating shake waves
+  shake(20, 250);
+  setTimeout(() => shake(38, 350), 160);
+  setTimeout(() => shake(55, 450), 300);
+  setTimeout(() => shake(72, 550), 430);
+
+  // Screen shatters
+  setTimeout(() => spawnScreenShatter(), 520);
+
+  // Entry fades, void appears
+  setTimeout(() => {
+    document.getElementById('entry').style.transition = 'opacity .4s ease';
+    document.getElementById('entry').style.opacity = '0';
+    const voidEl = document.getElementById('void');
+    voidEl.classList.add('active');
+    spawnVoidParticles();
+    spawnFallStreaks();
+    setTimeout(() => document.getElementById('void-glow').classList.add('rising'), 350);
+  }, 680);
+
+  // Landing rushes up
+  setTimeout(() => {
+    document.getElementById('landing').classList.add('arriving');
+    document.getElementById('void').style.transition = 'opacity .5s ease';
+    document.getElementById('void').style.opacity = '0';
+  }, 1750);
+
+  // Impact + content in
+  setTimeout(() => {
+    document.getElementById('entry').style.display = 'none';
+    document.getElementById('landing').classList.add('impact','landed');
+  }, 2850);
+
+  setTimeout(() => document.getElementById('scroll-hint').style.opacity = '1', 3700);
+}
+
+// ══════════════════════════════════════════════════
+// VOID PARTICLES
+// ══════════════════════════════════════════════════
+function spawnVoidParticles(){
+  const voidEl = document.getElementById('void');
+  for(let i = 0; i < 80; i++){
+    setTimeout(() => {
+      const star = document.createElement('div'); star.className = 'void-star';
+      const sz = .5 + Math.random()*2;
+      const x = 10 + Math.random()*80, y = 10 + Math.random()*80;
+      const dur = 500 + Math.random()*900;
+      const scale = 3 + Math.random()*12;
+      star.style.cssText = `left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;opacity:.9;
+        transition:transform ${dur}ms ease-in,opacity ${dur}ms ease-in;
+        transform:translate(-50%,-50%) scale(1);`;
+      voidEl.appendChild(star);
+      requestAnimationFrame(() => {
+        star.style.transform = `translate(-50%,-50%) scale(${scale})`;
+        star.style.opacity = '0';
+      });
+      setTimeout(() => star.remove(), dur + 100);
+    }, i * 22);
+  }
+}
+
+['cta-btn','cta-btn-2'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('click', () => { window.location.href = 'https://tally.so/r/J9kXxR'; });
+});
+
+// Clock
+function updateClock(){
+  const el = document.getElementById('l-clock');
+  if(!el) return;
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  el.textContent = `${h}:${m}:${s} — the clock resets at 12`;
+}
+setInterval(updateClock, 1000);
+
+// Scroll reveal for cards and quote
+function revealOnScroll(){
+  document.querySelectorAll('.l-card,.l-quote-card').forEach((el,i) => {
+    const rect = el.getBoundingClientRect();
+    if(rect.top < window.innerHeight * .92){
+      setTimeout(() => el.classList.add('visible'), i * 80);
+    }
+  });
+}
+document.getElementById('landing-scroll').addEventListener('scroll', revealOnScroll);
+</script>
+</body>
+</html>

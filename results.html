@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Results</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;}
+html,body{width:100%;min-height:100%;background:var(--cream);font-family:'Space Grotesk',sans-serif;cursor:none;padding:0 8px;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--black);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:36px;height:36px;}
+
+/* GRAIN */
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}
+30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}
+60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}};
+
+
+/* PAGE */
+#page{max-width:640px;margin:0 auto;padding:32px 52px 80px;position:relative;z-index:2;}
+@media(max-width:600px){#page{padding:28px 32px 80px;}}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;color:var(--black);}
+.nav-name{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+
+/* STATUS BADGE */
+.status-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 18px;border-radius:50px;
+  font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  margin-bottom:24px;
+  opacity:0;transform:translateY(-14px);
+}
+.status-badge.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.badge-dot{width:6px;height:6px;border-radius:50%;}
+.status-badge.ready{background:var(--black);color:var(--cream);}
+.status-badge.ready .badge-dot{background:var(--cream);}
+.status-badge.almost{background:transparent;color:var(--black);border:1.5px solid var(--black);}
+.status-badge.almost .badge-dot{background:var(--black);opacity:.4;}
+.status-badge.notready{background:var(--secondary);color:var(--cream);}
+.status-badge.notready .badge-dot{background:var(--cream);border-radius:2px;}
+
+/* HEADLINE */
+.headline{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(44px,9vw,76px);
+  color:var(--black);line-height:.93;letter-spacing:.01em;
+  margin-bottom:36px;
+  opacity:0;transform:translateY(20px);
+}
+.headline.go{animation:slideUp .7s cubic-bezier(.22,1,.36,1) .15s forwards;}
+
+/* SCORE */
+.score-block{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;opacity:0;}
+.score-block.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) .3s forwards;}
+.score-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,15vw,128px);color:var(--black);line-height:1;letter-spacing:-.02em;}
+.score-denom{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,46px);color:var(--muted);line-height:1;}
+.score-label{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:24px;opacity:0;}
+.score-label.go{animation:slideUp .5s ease .44s forwards;}
+
+/* SCORE BAR */
+.score-bar-wrap{height:2px;background:var(--divider);border-radius:2px;margin-bottom:36px;overflow:hidden;opacity:0;}
+.score-bar-wrap.go{animation:slideUp .4s ease .52s forwards;}
+.score-bar-fill{height:100%;background:var(--black);width:0%;border-radius:2px;transition:width 1.5s cubic-bezier(.22,1,.36,1);}
+
+/* SECTION DIVIDER */
+.section-divider{height:1px;background:var(--divider);margin:36px 0;opacity:0;}
+.section-divider.go{animation:slideUp .4s ease forwards;}
+
+/* BREAKDOWN */
+.breakdown-wrap{opacity:0;transform:translateY(16px);}
+.breakdown-wrap.go{animation:slideUp .7s cubic-bezier(.22,1,.36,1) forwards;}
+.breakdown-text{font-size:15px;color:var(--secondary);line-height:1.78;font-weight:300;margin-bottom:22px;}
+
+.breakdown-card{
+  border:1.5px solid var(--divider);border-radius:20px;
+  padding:24px;margin-bottom:4px;position:relative;overflow:hidden;
+}
+.breakdown-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;}
+.breakdown-card.ready::before{background:var(--black);}
+.breakdown-card.almost::before{background:var(--secondary);}
+.breakdown-card.notready::before{background:var(--muted);}
+.breakdown-card p{font-size:13px;line-height:1.78;color:var(--secondary);font-weight:300;}
+
+/* CTA SPLIT */
+.cta-block{margin:28px 0;opacity:0;transform:translateY(16px);}
+.cta-block.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.cta-split{
+  display:flex;align-items:stretch;gap:0;
+  border:1.5px solid var(--divider);border-radius:20px;
+  overflow:hidden;
+}
+.cta-option{
+  flex:1;padding:24px 22px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.cta-divider{
+  width:1px;background:var(--divider);
+  flex-shrink:0;
+}
+.cta-desc{
+  font-size:12px;color:var(--muted);font-weight:300;
+  line-height:1.65;
+}
+@media(max-width:480px){
+  .cta-split{flex-direction:column;}
+  .cta-divider{width:100%;height:1px;}
+}
+
+.btn-primary{
+  width:100%;background:var(--black);color:var(--cream);
+  border:none;padding:18px 32px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  cursor:none;transition:transform .25s ease,box-shadow .25s ease;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(10,10,10,.18);}
+.btn-secondary{
+  width:100%;background:transparent;color:var(--black);
+  border:1.5px solid var(--divider);padding:16px 32px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:500;
+  cursor:none;transition:transform .25s ease,border-color .2s;
+}
+.btn-secondary:hover{transform:translateY(-2px);border-color:var(--secondary);}
+
+/* LEARNING PATH */
+.path-header{opacity:0;transform:translateY(16px);margin-bottom:6px;}
+.path-header.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.path-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,44px);color:var(--black);letter-spacing:.01em;margin-bottom:6px;}
+.path-sub{font-size:12px;color:var(--muted);font-weight:300;letter-spacing:.04em;margin-bottom:24px;}
+
+/* DAY CARDS */
+.day-cards{display:flex;flex-direction:column;gap:12px;}
+.day-card{border:1.5px solid var(--divider);border-radius:20px;padding:22px;opacity:0;transform:translateY(20px);transition:border-color .2s,transform .2s ease;}
+.day-card.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.day-card:hover{border-color:var(--secondary);transform:translateX(5px);}
+.day-label{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.day-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.day-text{font-size:13px;line-height:1.78;color:var(--secondary);font-weight:300;}
+.day-text a{color:var(--black);font-weight:500;text-underline-offset:3px;}
+
+/* BOTTOM CTA */
+.bottom-cta{margin-top:40px;display:flex;flex-direction:column;gap:10px;opacity:0;}
+.bottom-cta.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+
+/* ANIMATIONS */
+@keyframes slideUp{to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+
+<div id="page">
+  <div class="nav">
+    <span class="nav-logo">First Move</span>
+    <span class="nav-name" id="nav-name"></span>
+  </div>
+
+  <div class="status-badge almost" id="status-badge">
+    <span class="badge-dot"></span>
+    <span id="status-text">Almost There</span>
+  </div>
+
+  <h1 class="headline" id="headline">You're close,<br>Jason.</h1>
+
+  <div class="score-block" id="score-block">
+    <span class="score-num" id="score-num">0</span>
+    <span class="score-denom">/12</span>
+  </div>
+  <div class="score-label" id="score-label">Skill Check Score</div>
+  <div class="score-bar-wrap" id="score-bar-wrap">
+    <div class="score-bar-fill" id="score-bar-fill"></div>
+  </div>
+
+  <div class="breakdown-wrap" id="breakdown-wrap">
+    <p class="breakdown-text" id="breakdown-text">You've got a solid foundation in communication and design thinking — you're clearly able to explain concepts and understand visual appeal, which are huge assets for anyone wanting to earn money in these fields. The areas where we level up together are persuasion depth and technical knowledge.</p>
+    <div class="breakdown-card almost" id="breakdown-card">
+      <p id="breakdown-card-text">You're closer than you think, but close isn't ready yet. There are gaps in your understanding that your first client will notice before you do. That's not a knock — it's just honest. One focused week with the right resources and you'll be in a completely different place.</p>
+    </div>
+  </div>
+
+  <div class="cta-block" id="cta-block">
+    <div class="cta-split">
+      <div class="cta-option">
+        <button class="btn-primary" id="btn-continue">Show me my moves</button>
+        <p class="cta-desc">Jump straight to your personalised hustle recommendations. You can always come back to sharpen your skills later — nothing locks behind you.</p>
+      </div>
+      <div class="cta-divider"></div>
+      <div class="cta-option">
+        <button class="btn-secondary" id="btn-arsenal">Sharpen my arsenal</button>
+        <p class="cta-desc">Work through 4 targeted resources first. Takes one week. Your recommendations wait for you — they'll be here when you're done.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// CURSOR
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX+'px';
+  cursor.style.top = e.clientY+'px';
+});
+document.addEventListener('mouseover', e => {
+  cursor.classList.toggle('big', !!e.target.closest('button,a'));
+});
+
+// PARAMS
+const params = new URLSearchParams(window.location.search);
+const STATUS = params.get('status') || 'ALMOST';
+const SCORE  = parseInt(params.get('score') || '7');
+const NAME   = params.get('name') || 'Jason';
+
+// STATUS CONFIG
+const cfg = {
+  READY:{
+    badgeClass:'ready', badgeText:'Ready',
+    headline:`You're ready,<br>${NAME}.`,
+    cardClass:'ready',
+    cardText:`Your fundamentals are solid. Most people your age are still googling "how to make money online" — you actually know what you're doing. The work now is execution, not preparation. Every day you wait is a day someone else takes the client you could have had.`,
+    btnContinue:'Show me my moves',
+    btnArsenal:'Sharpen further anyway'
+  },
+  ALMOST:{
+    badgeClass:'almost', badgeText:'Almost There',
+    headline:`You're close,<br>${NAME}.`,
+    cardClass:'almost',
+    cardText:`You're closer than you think, but close isn't ready yet. There are gaps in your understanding that your first client will notice before you do. That's not a knock — it's just honest. One focused week with the right resources and you'll be in a completely different place.`,
+    btnContinue:`I'm ready, show me my moves`,
+    btnArsenal:'Sharpen my arsenal first'
+  },
+  NOT_READY:{
+    badgeClass:'notready', badgeText:'Not There Yet',
+    headline:`Be honest<br>with yourself, ${NAME}.`,
+    cardClass:'notready',
+    cardText:`The gaps are real and they matter. Going into client work right now means delivering work you can't stand behind — and that first bad experience is hard to shake. This isn't a wall, it's a week. The resources below are the exact path. Do the work. Come back stronger.`,
+    btnContinue:`I'll take my chances`,
+    btnArsenal:'Close the gaps first'
+  }
+}[STATUS] || {
+  badgeClass:'almost', badgeText:'Almost There',
+  headline:`You're close,<br>${NAME}.`,
+  cardClass:'almost',
+  cardText:`You're closer than you think, but close isn't ready yet.`,
+  btnContinue:`Show me my moves`,
+  btnArsenal:'Sharpen my arsenal first'
+};
+
+// APPLY
+const badge = document.getElementById('status-badge');
+badge.className = `status-badge ${cfg.badgeClass}`;
+badge.innerHTML = `<span class="badge-dot"></span><span>${cfg.badgeText}</span>`;
+document.getElementById('headline').innerHTML = cfg.headline;
+document.getElementById('breakdown-card').className = `breakdown-card ${cfg.badgeClass}`;
+document.getElementById('breakdown-card-text').textContent = cfg.cardText;
+document.getElementById('nav-name').textContent = NAME;
+document.getElementById('btn-continue').textContent = cfg.btnContinue;
+document.getElementById('btn-arsenal').textContent = cfg.btnArsenal;
+
+// REVEAL MAP
+const revealMap = [
+  {id:'status-badge', delay:0},
+  {id:'headline',     delay:150},
+  {id:'score-block',  delay:300},
+  {id:'score-label',  delay:420},
+  {id:'score-bar-wrap',delay:500},
+  {id:'breakdown-wrap',delay:620},
+  {id:'cta-block',    delay:780},
+];
+
+revealMap.filter(r=>!r.scroll).forEach(r=>{
+  setTimeout(()=>{
+    const el=document.getElementById(r.id);
+    if(el) el.classList.add('go');
+    if(r.id==='score-block') startCounter();
+    if(r.id==='score-bar-wrap') setTimeout(()=>{ document.getElementById('score-bar-fill').style.width=`${(SCORE/12)*100}%`; },100);
+  }, r.delay);
+});
+
+const scrollItems = revealMap.filter(r=>r.scroll);
+function checkScroll(){
+  scrollItems.forEach(r=>{
+    const el=document.getElementById(r.id);
+    if(!el||el.classList.contains('go')) return;
+    if(el.getBoundingClientRect().top < window.innerHeight*.9){
+      setTimeout(()=>el.classList.add('go'), r.delay);
+    }
+  });
+}
+window.addEventListener('scroll', checkScroll, {passive:true});
+checkScroll();
+
+// SCORE COUNTER
+function startCounter(){
+  const el=document.getElementById('score-num');
+  const dur=1400, start=Date.now();
+  function tick(){
+    const p=Math.min(1,(Date.now()-start)/dur);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(ease*SCORE);
+    if(p<1) requestAnimationFrame(tick);
+    else el.textContent=SCORE;
+  }
+  requestAnimationFrame(tick);
+}
+
+// ══════════════════════════════════════
+
+// BUTTONS
+function goToRecommendations(){
+  const id = params.get('id') || '';
+  window.location.href = `recommendations.html?id=${id}`;
+}
+function goToArsenal(){
+  const id = params.get('id') || '';
+  window.location.href = `arsenal.html?id=${id}&status=${STATUS}&score=${SCORE}&name=${NAME}`;
+}
+['btn-continue'].forEach(id=>{ document.getElementById(id)?.addEventListener('click', goToRecommendations); });
+['btn-arsenal'].forEach(id=>{ document.getElementById(id)?.addEventListener('click', goToArsenal); });
+
+// ── BREATHING BACKGROUND
+(function(){
+  let t=Math.random()*Math.PI*2;
+  const spd=0.005+Math.random()*0.003;
+  function breath(){
+    t+=spd;
+    const mix=(Math.sin(t)+1)/2;
+    const r=Math.round(232+(222-232)*mix);
+    const g=Math.round(230+(218-230)*mix);
+    const b=Math.round(224+(211-224)*mix);
+    document.body.style.backgroundColor=`rgb(${r},${g},${b})`;
+    requestAnimationFrame(breath);
+  }
+  requestAnimationFrame(breath);
+})();
+
+// ── EASTER EGG: Hover score number 3s — counts up to 12 then back
+const scoreEl=document.getElementById('score-num');
+if(scoreEl){
+  let hoverTimer, taunting=false;
+  scoreEl.addEventListener('mouseenter',()=>{
+    if(taunting) return;
+    hoverTimer=setTimeout(()=>{
+      taunting=true;
+      const orig=SCORE;
+      let cur=orig;
+      // Count UP fast — eager
+      const upInterval=setInterval(()=>{
+        cur++;
+        scoreEl.textContent=cur;
+        if(cur>=12){
+          clearInterval(upInterval);
+          // Pause at 12 for a beat
+          setTimeout(()=>{
+            // Count DOWN slowly, one by one — taunting
+            const downInterval=setInterval(()=>{
+              cur--;
+              scoreEl.textContent=cur;
+              if(cur<=orig){
+                clearInterval(downInterval);
+                scoreEl.textContent=orig;
+                taunting=false;
+              }
+            }, 280); // slow — one number at a time, deliberate
+          }, 600); // pause at 12
+        }
+      }, 55); // fast upward
+    },3000);
+  });
+  scoreEl.addEventListener('mouseleave',()=>{
+    clearTimeout(hoverTimer);
+    // don't interrupt mid-taunt
+  });
+}
+
+// ── EASTER EGG: Logo 5x click
+let lc=0,lt;
+document.querySelector('.nav-logo')?.addEventListener('click',()=>{
+  lc++; clearTimeout(lt); lt=setTimeout(()=>lc=0,1500);
+  if(lc>=5){
+    lc=0;
+    const q='"Today it begins. Tomorrow it continues. And it never ends, until you reach your goal."';
+    const el=document.createElement('div');
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:#E8E6E0;padding:16px 24px;border-radius:12px;font-family:Space Grotesk,sans-serif;font-size:12px;max-width:380px;text-align:center;z-index:9998;opacity:0;transition:opacity .4s ease;line-height:1.6;';
+    el.textContent=q;
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.style.opacity='1');
+    setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),500); },2500);
+  }
+});
+</script>
+</body>
+</html>

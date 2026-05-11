@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Toolkit</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;}
+html,body{width:100%;min-height:100%;background:var(--cream);font-family:'Space Grotesk',sans-serif;cursor:none;overflow-x:hidden;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--black);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:40px;height:40px;}
+
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}
+30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}
+60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}};
+
+/* NAV */
+#top-nav{position:sticky;top:0;z-index:50;background:var(--cream);padding:20px 52px 0;border-bottom:1px solid var(--divider);}
+.nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;color:var(--black);}
+.nav-context{display:flex;gap:8px;align-items:center;}
+.nav-pill{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);padding:5px 12px;border:1px solid var(--divider);border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+.progress-bar-wrap{height:2px;background:var(--divider);overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--black);width:60%;transition:width .6s cubic-bezier(.22,1,.36,1);}
+
+/* PAGE */
+#page{max-width:680px;margin:0 auto;padding:48px 52px 100px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{margin-bottom:48px;}
+.hero-eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400;margin-bottom:16px;opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease;}
+.hero-eyebrow.go{opacity:1;transform:translateY(0);}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,80px);color:var(--black);line-height:.92;letter-spacing:.01em;margin-bottom:16px;opacity:0;transform:translateY(20px);transition:opacity .7s ease .1s,transform .7s cubic-bezier(.22,1,.36,1) .1s;}
+.hero-title.go{opacity:1;transform:translateY(0);}
+.hero-sub{font-size:14px;color:var(--secondary);font-weight:300;line-height:1.7;max-width:480px;opacity:0;transform:translateY(12px);transition:opacity .6s ease .25s,transform .6s ease .25s;}
+.hero-sub.go{opacity:1;transform:translateY(0);}
+
+/* ══════════════════════════════════
+   TOOLKIT BOX — the container
+   ══════════════════════════════════ */
+.toolkit-wrap{
+  position:relative;
+  margin-bottom:32px;
+  opacity:0;transform:translateY(24px);
+  transition:opacity .7s ease .4s,transform .7s cubic-bezier(.22,1,.36,1) .4s;
+}
+.toolkit-wrap.go{opacity:1;transform:translateY(0);}
+
+/* the box itself */
+.toolkit-box{
+  border:2px solid var(--black);
+  border-radius:24px;
+  overflow:hidden;
+  position:relative;
+  z-index:1;
+}
+
+.toolkit-header{
+  background:var(--black);
+  padding:22px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:none;
+}
+.toolkit-label{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--cream);letter-spacing:.04em;}
+.toolkit-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.toolkit-sub{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(232,230,224,.4);}
+.toolkit-progress{display:flex;gap:6px;margin-top:4px;}
+.tk-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(232,230,224,.25);transition:background .4s,border-color .4s,transform .3s;}
+.tk-dot.active{border-color:rgba(232,230,224,.6);}
+.tk-dot.confirmed{background:var(--cream);border-color:var(--cream);transform:scale(1.2);}
+
+/* scroll stubs — the rolled-up tools visible in the box */
+.toolkit-stubs{
+  padding:16px 20px;
+  display:flex;flex-direction:column;gap:8px;
+  background:var(--black);
+  border-top:1px solid rgba(232,230,224,.08);
+}
+.stub{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  border:1px solid rgba(232,230,224,.1);
+  border-radius:10px;
+  cursor:none;
+  transition:border-color .2s,background .2s,opacity .4s,transform .3s;
+  background:rgba(232,230,224,.04);
+}
+.stub:hover{border-color:rgba(232,230,224,.25);background:rgba(232,230,224,.07);}
+.stub.current{border-color:rgba(232,230,224,.4);background:rgba(232,230,224,.09);}
+.stub.confirmed-stub{opacity:.35;pointer-events:none;}
+.stub.locked-stub{opacity:.2;pointer-events:none;}
+.stub-left{display:flex;align-items:center;gap:12px;}
+.stub-icon{
+  width:28px;height:28px;border-radius:6px;
+  background:rgba(232,230,224,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:rgba(232,230,224,.5);
+  font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;
+  transition:background .2s;
+}
+.stub.current .stub-icon{background:rgba(232,230,224,.2);color:var(--cream);}
+.stub.confirmed-stub .stub-icon{background:rgba(232,230,224,.06);}
+.stub-name{font-size:12px;color:rgba(232,230,224,.5);font-weight:400;letter-spacing:.02em;transition:color .2s;}
+.stub.current .stub-name{color:var(--cream);font-weight:500;}
+.stub-action{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(232,230,224,.25);transition:color .2s;}
+.stub.current .stub-action{color:rgba(232,230,224,.5);}
+.stub.confirmed-stub .stub-action{color:rgba(232,230,224,.2);}
+
+/* ══════════════════════════════════
+   EXPANDED TOOL CARD
+   Slides up from toolkit box
+   ══════════════════════════════════ */
+#expanded-wrap{
+  margin-top:0;
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .7s cubic-bezier(.22,1,.36,1), margin-top .4s ease;
+}
+#expanded-wrap.open{
+  max-height:1200px;
+  margin-top:16px;
+}
+
+.expanded-card{
+  border:2px solid var(--black);
+  border-radius:20px;
+  overflow:hidden;
+  transform:translateY(-20px);
+  opacity:0;
+  transition:transform .6s cubic-bezier(.22,1,.36,1), opacity .5s ease;
+}
+#expanded-wrap.open .expanded-card{
+  transform:translateY(0);
+  opacity:1;
+}
+
+/* card returning — slide back down */
+.expanded-card.returning{
+  transform:translateY(-16px);
+  opacity:0;
+  transition:transform .4s cubic-bezier(.55,0,1,.45), opacity .3s ease;
+}
+
+.tool-content{padding:28px;}
+
+.tool-header-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;}
+.tool-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,46px);color:var(--black);line-height:.93;letter-spacing:.01em;margin-bottom:4px;}
+.tool-type{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+.tool-badges{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.badge{font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:50px;white-space:nowrap;}
+.badge-free{background:var(--divider);color:var(--secondary);}
+.badge-gem{background:var(--black);color:var(--cream);}
+
+.tool-divider{height:1px;background:var(--divider);margin-bottom:20px;}
+
+.tool-section{margin-bottom:20px;}
+.tool-section-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.tool-section-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.tool-section p{font-size:13px;color:var(--secondary);line-height:1.78;font-weight:300;}
+
+.tool-proof{background:rgba(10,10,10,.04);border-radius:12px;padding:14px 16px;margin-bottom:20px;border-left:2px solid var(--divider);}
+.tool-proof-label{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.tool-proof p{font-size:12px;color:var(--secondary);line-height:1.7;font-weight:300;font-style:italic;}
+
+.tool-confirm-btn{
+  width:100%;background:var(--black);color:var(--cream);
+  border:none;padding:16px 24px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  cursor:none;transition:transform .25s,box-shadow .25s;
+}
+.tool-confirm-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(10,10,10,.18);}
+
+/* ══════════════════════════════════
+   COMPLETION
+   ══════════════════════════════════ */
+#kit-complete{
+  opacity:0;transform:translateY(24px);
+  transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;margin-top:32px;
+}
+#kit-complete.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+.complete-card{background:var(--black);border-radius:20px;padding:32px;margin-bottom:14px;}
+.complete-title{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--cream);letter-spacing:.02em;margin-bottom:10px;}
+.complete-quote{font-size:12px;font-style:italic;color:rgba(232,230,224,.45);line-height:1.6;margin-bottom:6px;}
+.complete-attr{font-size:10px;letter-spacing:.15em;color:rgba(232,230,224,.25);display:block;margin-bottom:24px;}
+.btn-primary{width:100%;background:var(--cream);color:var(--black);border:none;padding:18px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;transition:transform .25s,box-shadow .25s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,230,224,.15);}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+
+<div id="top-nav">
+  <div class="nav-row">
+    <span class="nav-logo">First Move</span>
+    <div class="nav-context">
+      <span class="nav-pill" id="nav-hustle">Hustle</span>
+      <span class="nav-pill" id="nav-niche">Niche</span>
+    </div>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+</div>
+
+<div id="page">
+  <div class="hero">
+    <div class="hero-eyebrow">Step 3 of 5 — Tools</div>
+    <h1 class="hero-title">Your starter<br>toolkit.</h1>
+    <p class="hero-sub">Four tools. All free. Built for your hustle and your niche. Two of them most people in your space have never heard of. Pull each one out, read it, confirm it.</p>
+  </div>
+
+  <div class="toolkit-wrap" id="toolkit-wrap">
+    <!-- THE BOX -->
+    <div class="toolkit-box">
+      <div class="toolkit-header">
+        <div class="toolkit-label" id="toolkit-label">Your Toolkit</div>
+        <div class="toolkit-meta">
+          <div class="toolkit-sub" id="toolkit-sub">0 of 4 confirmed</div>
+          <div class="toolkit-progress" id="toolkit-dots"></div>
+        </div>
+      </div>
+      <div class="toolkit-stubs" id="toolkit-stubs"></div>
+    </div>
+
+    <!-- EXPANDED TOOL — slides up from box -->
+    <div id="expanded-wrap">
+      <div class="expanded-card" id="expanded-card">
+        <div class="tool-content" id="tool-content-inner"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="kit-complete">
+    <div class="complete-card">
+      <div class="complete-title">Kit Assembled.</div>
+      <p class="complete-quote">"When every action has a purpose, every action has a result."</p>
+      <span class="complete-attr">— Greg Plitt</span>
+      <button class="btn-primary" id="btn-next">Build my client profile →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const cursor=document.getElementById("cursor");
+document.addEventListener("mousemove",e=>{cursor.style.left=e.clientX+"px";cursor.style.top=e.clientY+"px";});
+document.addEventListener("mouseover",e=>{cursor.classList.toggle("big",!!e.target.closest("button,.stub"));});
+
+const params=new URLSearchParams(window.location.search);
+const hustle=params.get("hustle")||"Social Media Management";
+const niche=params.get("niche")||"Fitness Brands";
+const recordId=params.get("id")||"";
+const userName=params.get("name")||"";
+
+document.getElementById("nav-hustle").textContent=hustle;
+document.getElementById("nav-niche").textContent=niche;
+document.getElementById("toolkit-label").textContent=hustle.split(" ").slice(0,2).join(" ").toUpperCase()+" KIT";
+
+// ── AIRTABLE FETCH + PARSER
+const WORKER = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+let TOOLS = [];
+let toolPolls = 0;
+
+function cleanT(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
+
+function parseTools(raw){
+  const blocks = raw.split(/\n---\n/).filter(b=>b.trim().length>20);
+  return blocks.slice(0,4).map(block=>{
+    const get = (key) => {
+      const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|$)');
+      const m = block.match(re);
+      return m ? cleanT(m[1]) : '';
+    };
+    const gemRaw = get('HIDDEN_GEM').toUpperCase();
+    return {
+      name:  get('TOOL_NAME'),
+      type:  get('TOOL_TYPE'),
+      gem:   gemRaw === 'YES',
+      what:  get('WHAT_IT_DOES'),
+      howTo: get('HOW_TO_USE'),
+      proof: get('PROOF_IT_WORKS')
+    };
+  });
+}
+
+function pollTools(){
+  if(!recordId){ loadFallbackTools(); return; }
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      const raw = fields['Tool Suggestions'] || fields['tool_suggestions'] || '';
+      if(raw && raw.trim().length > 100){
+        const parsed = parseTools(raw);
+        if(parsed.length >= 2){
+          TOOLS = parsed;
+          buildToolStubs();
+        } else { retryTools(); }
+      } else { retryTools(); }
+    })
+    .catch(retryTools);
+}
+
+function retryTools(){
+  toolPolls++;
+  if(toolPolls < 15) setTimeout(pollTools, 3000);
+  else loadFallbackTools();
+}
+
+function loadFallbackTools(){
+  TOOLS = [
+    {name:"Canva",type:"Design and Content Creation",gem:false,what:"Canva is your design studio. It handles everything from Instagram posts to client reports. Templates mean you produce professional content in 20 minutes.",howTo:"Create a Brand Kit for each client — upload their logo, set their colours, save their fonts. Every piece of content stays consistent in 3 clicks.",proof:"A teen in Pune batch-created a full month of content for 3 restaurants in one Sunday afternoon. All three clients renewed within the first month."},
+    {name:"Buffer",type:"Social Media Scheduling",gem:false,what:"Buffer lets you schedule posts across Instagram, Facebook and LinkedIn from one dashboard. You sit down once a week, load up content, set the times, and walk away.",howTo:"Set up a recurring weekly schedule for each client at their peak engagement times. Use the analytics tab after 2 weeks to see which formats perform best.",proof:"A student cut his weekly work from 8 hours to 2.5 hours using scheduling. Used the freed-up time to take on a second client within 6 weeks."},
+    {name:"Metricool",type:"Analytics and Reporting",gem:true,what:"Metricool is a free analytics tool most managers have never heard of. It pulls detailed data from Instagram, Facebook, LinkedIn and generates beautiful PDF reports automatically.",howTo:"Connect your client accounts on day one. After 30 days export their first monthly report — graphs, growth numbers, top performing posts. Send it as a PDF with your name on it.",proof:"A freelancer in Hyderabad landed a high-value retainer by showing up to a pitch with a competitor analysis the client had never seen before."},
+    {name:"Publer",type:"AI-Assisted Content Planning",gem:true,what:"Publer is a scheduling and AI writing tool almost nobody in the Indian social media space is using yet. Built-in AI writes captions and suggests hashtags — all in the free tier.",howTo:"Use the AI caption writer as a starting point not a final product. Feed it the client brand voice and post topic. Edit the output to sound human.",proof:"A content manager cut writing time by 60% using AI caption suggestions and took on two more clients without increasing weekly hours."}
+  ];
+  buildToolStubs();
+}
+
+let confirmed=[false,false,false,false];
+let currentTool=null;
+
+function buildToolStubs(){
+  // BUILD DOTS
+  const dotsEl=document.getElementById("toolkit-dots");
+  dotsEl.innerHTML='';
+  TOOLS.forEach((_,i)=>{
+    const d=document.createElement("div");
+    d.className="tk-dot"+(i===0?" active":"");
+    d.id="tkdot-"+i;
+    dotsEl.appendChild(d);
+  });
+
+  // BUILD STUBS
+  const stubsEl=document.getElementById("toolkit-stubs");
+  stubsEl.innerHTML='';
+  TOOLS.forEach((t,i)=>{
+    const stub=document.createElement("div");
+    stub.className="stub"+(i===0?" current":i>0?" locked-stub":"");
+    stub.id="stub-"+i;
+    stub.dataset.i=i;
+    stub.innerHTML=`
+      <div class="stub-left">
+        <div class="stub-icon">${String.fromCharCode(65+i)}</div>
+        <span class="stub-name">${i===0?t.name:"Tool "+(i+1)}</span>
+      </div>
+      <span class="stub-action">${i===0?"Pull out →":"Locked"}</span>
+    `;
+    stubsEl.appendChild(stub);
+  });
+}
+
+// Start poll — buildToolStubs() called when data arrives
+pollTools();
+
+// STUB CLICK — pull out tool
+document.getElementById("toolkit-stubs").addEventListener("click",e=>{
+  const stub=e.target.closest(".stub");
+  if(!stub||stub.classList.contains("locked-stub")||stub.classList.contains("confirmed-stub")) return;
+  const i=parseInt(stub.dataset.i);
+  if(currentTool===i) return; // already open
+  pullOut(i);
+});
+
+function pullOut(i){
+  currentTool=i;
+  const t=TOOLS[i];
+
+  // Update stub states
+  document.querySelectorAll(".stub").forEach(s=>s.classList.remove("current"));
+  document.getElementById("stub-"+i).classList.add("current");
+
+  // Build content
+  document.getElementById("tool-content-inner").innerHTML=`
+    <div class="tool-header-row">
+      <div>
+        <div class="tool-name">${t.name}</div>
+        <div class="tool-type">${t.type}</div>
+      </div>
+      <div class="tool-badges">
+        <span class="badge badge-free">Free</span>
+        ${t.gem?'<span class="badge badge-gem">Hidden Gem</span>':""}
+      </div>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-section">
+      <div class="tool-section-label">What it does</div>
+      <p>${t.what}</p>
+    </div>
+    <div class="tool-section">
+      <div class="tool-section-label">How to use it for your hustle</div>
+      <p>${t.howTo}</p>
+    </div>
+    <div class="tool-proof">
+      <div class="tool-proof-label">Proof it works</div>
+      <p>${t.proof}</p>
+    </div>
+    <button class="tool-confirm-btn" id="confirm-btn" data-i="${i}">Add to my kit →</button>
+  `;
+
+  // Reset card state
+  const card=document.getElementById("expanded-card");
+  card.classList.remove("returning");
+
+  // Open wrap and animate card in
+  const wrap=document.getElementById("expanded-wrap");
+  wrap.classList.add("open");
+
+  // Scroll into view after animation
+  setTimeout(()=>{
+    wrap.scrollIntoView({behavior:"smooth",block:"nearest"});
+  },400);
+
+  // Confirm button
+  document.getElementById("confirm-btn").addEventListener("click",()=>confirmTool(i));
+}
+
+function confirmTool(i){
+  confirmed[i]=true;
+  currentTool=null;
+
+  // Slide card back down
+  const card=document.getElementById("expanded-card");
+  card.classList.add("returning");
+
+  setTimeout(()=>{
+    const wrap=document.getElementById("expanded-wrap");
+    wrap.classList.remove("open");
+    setTimeout(()=>card.classList.remove("returning"),500);
+  },350);
+
+  // Update stub
+  const stub=document.getElementById("stub-"+i);
+  stub.classList.remove("current");
+  stub.classList.add("confirmed-stub");
+  stub.querySelector(".stub-action").textContent="In kit ✓";
+
+  // Update dot
+  const dot=document.getElementById("tkdot-"+i);
+  if(dot){dot.classList.remove("active");dot.classList.add("confirmed");}
+
+  // Update count
+  const count=confirmed.filter(Boolean).length;
+  document.getElementById("toolkit-sub").textContent=count+" of 4 confirmed";
+
+  // Unlock next
+  if(i<3){
+    setTimeout(()=>unlockNext(i+1),600);
+  }
+
+  // Completion
+  if(count===4) setTimeout(showComplete,800);
+}
+
+function unlockNext(i){
+  const stub=document.getElementById("stub-"+i);
+  stub.classList.remove("locked-stub");
+  stub.classList.add("current");
+  stub.querySelector(".stub-name").textContent=TOOLS[i].name;
+  stub.querySelector(".stub-action").textContent="Pull out →";
+  // activate dot
+  const dot=document.getElementById("tkdot-"+i);
+  if(dot) dot.classList.add("active");
+  // subtle pulse on the stub
+  stub.style.transition="transform .3s cubic-bezier(.22,1,.36,1)";
+  stub.style.transform="translateX(6px)";
+  setTimeout(()=>stub.style.transform="",350);
+}
+
+function showComplete(){
+  const comp=document.getElementById("kit-complete");
+  comp.classList.add("visible");
+  setTimeout(()=>comp.scrollIntoView({behavior:"smooth",block:"center"}),100);
+}
+
+document.getElementById("btn-next").addEventListener("click",()=>{
+  window.location.href=`client.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
+});
+
+// HERO ANIMATIONS
+setTimeout(()=>{
+  document.querySelector(".hero-eyebrow").classList.add("go");
+  setTimeout(()=>document.querySelector(".hero-title").classList.add("go"),120);
+  setTimeout(()=>document.querySelector(".hero-sub").classList.add("go"),240);
+  setTimeout(()=>document.getElementById("toolkit-wrap").classList.add("go"),380);
+},100);
+
+// BREATHING
+(function(){
+  let t=Math.random()*Math.PI*2;
+  const spd=0.005+Math.random()*0.003;
+  function breath(){
+    t+=spd;
+    const mix=(Math.sin(t)+1)/2;
+    document.body.style.backgroundColor=`rgb(${Math.round(232+(222-232)*mix)},${Math.round(230+(218-230)*mix)},${Math.round(224+(211-224)*mix)})`;
+    requestAnimationFrame(breath);
+  }
+  requestAnimationFrame(breath);
+})();
+
+// EASTER EGG: Logo 5x
+let lc=0,lt;
+document.querySelector(".nav-logo")?.addEventListener("click",()=>{
+  lc++;clearTimeout(lt);lt=setTimeout(()=>lc=0,1500);
+  if(lc>=5){
+    lc=0;
+    const el=document.createElement("div");
+    el.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:#E8E6E0;padding:16px 24px;border-radius:12px;font-family:Space Grotesk,sans-serif;font-size:12px;max-width:360px;text-align:center;z-index:9998;opacity:0;transition:opacity .4s ease;line-height:1.6;";
+    el.textContent="When every action has a purpose, every action has a result.";
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.style.opacity="1");
+    setTimeout(()=>{el.style.opacity="0";setTimeout(()=>el.remove(),500);},2500);
+  }
+});
+</script>
+</body>
+</html>

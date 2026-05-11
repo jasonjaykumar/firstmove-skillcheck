@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Client</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;--green:#2D6A4F;--red:#8B2020;}
+html,body{width:100%;min-height:100%;background:var(--cream);font-family:'Space Grotesk',sans-serif;cursor:none;overflow-x:hidden;}
+#cursor{position:fixed;width:10px;height:10px;background:var(--black);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:40px;height:40px;}
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}};
+
+/* NAV */
+#top-nav{position:sticky;top:0;z-index:50;background:var(--cream);padding:20px 52px 0;border-bottom:1px solid var(--divider);}
+.nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;color:var(--black);}
+.nav-context{display:flex;gap:8px;}
+.nav-pill{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);padding:5px 12px;border:1px solid var(--divider);border-radius:50px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
+.progress-bar-wrap{height:2px;background:var(--divider);overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--black);width:80%;}
+
+/* PAGE */
+#page{max-width:720px;margin:0 auto;padding:48px 52px 100px;position:relative;z-index:1;}
+
+/* HERO */
+.hero-eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease;}
+.hero-eyebrow.go{opacity:1;transform:translateY(0);}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,80px);color:var(--black);line-height:.92;letter-spacing:.01em;margin-bottom:16px;opacity:0;transform:translateY(20px);transition:opacity .7s ease .1s,transform .7s cubic-bezier(.22,1,.36,1) .1s;}
+.hero-title.go{opacity:1;transform:translateY(0);}
+.hero-sub{font-size:14px;color:var(--secondary);font-weight:300;line-height:1.7;max-width:480px;margin-bottom:48px;opacity:0;transform:translateY(12px);transition:opacity .6s ease .25s,transform .6s ease .25s;}
+.hero-sub.go{opacity:1;transform:translateY(0);}
+
+/* ══════════════════════════
+   PROFILE SELECTOR
+   ══════════════════════════ */
+.profile-selector{
+  display:flex;gap:24px;margin-bottom:48px;
+  justify-content:center;
+  opacity:0;transform:translateY(16px);
+  transition:opacity .6s ease .4s,transform .6s ease .4s;
+}
+.profile-selector.go{opacity:1;transform:translateY(0);}
+
+.profile-icon-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  cursor:none;position:relative;
+}
+
+/* Click hint bubble */
+.click-hint{
+  position:absolute;
+  top:-14px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--black);
+  color:var(--cream);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:5px 11px;
+  border-radius:50px;
+  white-space:nowrap;
+  pointer-events:none;
+  animation:hintBob 2s ease-in-out infinite;
+  z-index:10;
+  transition:opacity .3s ease;
+}
+.click-hint::after{
+  content:'';
+  position:absolute;
+  bottom:-5px;left:50%;
+  transform:translateX(-50%);
+  border-left:5px solid transparent;
+  border-right:5px solid transparent;
+  border-top:6px solid var(--black);
+}
+.click-hint.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+@keyframes hintBob{
+  0%,100%{transform:translateX(-50%) translateY(0);}
+  50%{transform:translateX(-50%) translateY(-5px);}
+}
+.profile-icon{
+  width:100px;height:100px;border-radius:50%;
+  border:2px solid var(--divider);
+  background:var(--cream);
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .3s,transform .3s,box-shadow .3s;
+  position:relative;overflow:hidden;
+}
+.profile-icon:hover{transform:scale(1.05);box-shadow:0 8px 32px rgba(10,10,10,.1);}
+.profile-icon.ideal-icon{border-color:rgba(45,106,79,.3);}
+.profile-icon.ideal-icon:hover{border-color:var(--green);box-shadow:0 8px 32px rgba(45,106,79,.15);}
+.profile-icon.walkaway-icon{border-color:rgba(139,32,32,.2);}
+.profile-icon.walkaway-icon:hover{border-color:var(--red);box-shadow:0 8px 32px rgba(139,32,32,.1);}
+.profile-icon.active-icon{transform:scale(1.08);}
+.profile-icon.ideal-icon.active-icon{border-color:var(--green);border-width:2.5px;}
+.profile-icon.walkaway-icon.active-icon{border-color:var(--red);border-width:2.5px;}
+
+.profile-label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--muted);text-align:center;}
+.profile-label.ideal-label{color:var(--green);}
+.profile-label.walkaway-label{color:var(--red);}
+.profile-sublabel{font-size:10px;color:var(--muted);font-weight:300;text-align:center;margin-top:-6px;}
+
+/* ══════════════════════════
+   FIGURE STAGE
+   ══════════════════════════ */
+#figure-stage{
+  display:none;
+  flex-direction:row;
+  align-items:flex-start;
+  gap:32px;
+  margin-bottom:40px;
+  min-height:320px;
+}
+#figure-stage.visible{display:flex;}
+
+/* figure area */
+.figure-area{
+  flex-shrink:0;
+  width:120px;
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;
+}
+
+/* SVG stickman */
+.stickman{
+  width:100px;height:200px;
+  opacity:0;
+}
+.stickman.appear{animation:figureAppear .5s cubic-bezier(.22,1,.36,1) forwards;}
+@keyframes figureAppear{from{opacity:0;transform:translateY(20px) scale(.9);}to{opacity:1;transform:translateY(0) scale(1);}}
+
+/* stickman draw-in animation for each part */
+.body-part{
+  stroke-dasharray:300;
+  stroke-dashoffset:300;
+}
+.body-part.drawn{
+  animation:drawLine .4s ease forwards;
+}
+@keyframes drawLine{to{stroke-dashoffset:0;}}
+
+/* head bob */
+@keyframes headBob{
+  0%,100%{transform:rotate(0deg);}
+  25%{transform:rotate(-3deg);}
+  75%{transform:rotate(3deg);}
+}
+.head-group.talking{
+  transform-origin:50px 38px;
+  animation:headBob .6s ease infinite;
+}
+
+/* figure name tag */
+.figure-nametag{
+  font-size:11px;font-weight:600;letter-spacing:.08em;
+  margin-top:8px;text-align:center;
+  opacity:0;transition:opacity .4s ease .8s;
+}
+.figure-nametag.visible{opacity:1;}
+.figure-nametag.ideal{color:var(--green);}
+.figure-nametag.walkaway{color:var(--red);}
+
+/* ══════════════════════════
+   SPEECH BUBBLE
+   ══════════════════════════ */
+.speech-wrap{
+  flex:1;
+  display:flex;flex-direction:column;
+  gap:0;
+  padding-top:16px;
+}
+
+.speech-bubble{
+  background:var(--black);
+  border-radius:20px 20px 20px 4px;
+  padding:20px 22px;
+  position:relative;
+  opacity:0;transform:translateX(-10px);
+  transition:opacity .4s ease,transform .4s cubic-bezier(.22,1,.36,1);
+  min-height:60px;
+}
+.speech-bubble.visible{opacity:1;transform:translateX(0);}
+.speech-bubble.ideal-bubble{background:var(--black);}
+.speech-bubble.walkaway-bubble{background:var(--secondary);}
+
+/* tail */
+.speech-bubble::before{
+  content:'';position:absolute;
+  left:-10px;top:20px;
+  border:6px solid transparent;
+  border-right-color:var(--black);
+}
+.walkaway-bubble::before{border-right-color:var(--secondary);}
+
+#speech-text{
+  font-size:13px;line-height:1.75;font-weight:300;
+  color:rgba(232,230,224,.85);
+  min-height:40px;
+}
+/* highlighted words */
+.highlight-green{color:#6FCF97;font-weight:600;}
+.highlight-red{color:#EB5757;font-weight:600;}
+
+/* typing cursor */
+.typing-cursor{
+  display:inline-block;width:2px;height:14px;
+  background:rgba(232,230,224,.6);
+  margin-left:2px;vertical-align:middle;
+  animation:blink .7s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* ══════════════════════════
+   DETAIL BOXES
+   ══════════════════════════ */
+#detail-boxes{
+  display:none;flex-direction:column;gap:12px;
+  margin-bottom:40px;
+}
+#detail-boxes.visible{display:flex;}
+
+.detail-box{
+  border:1.5px solid var(--divider);border-radius:16px;
+  padding:18px 22px;
+  opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1);
+}
+.detail-box.go{opacity:1;transform:translateY(0);}
+.detail-box.green-box{border-color:rgba(45,106,79,.3);background:rgba(45,106,79,.04);}
+.detail-box.red-box{border-color:rgba(139,32,32,.2);background:rgba(139,32,32,.03);}
+.detail-box-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.detail-box-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.detail-box p{font-size:13px;color:var(--secondary);line-height:1.7;font-weight:300;}
+.flag-list{display:flex;flex-direction:column;gap:6px;}
+.flag-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--secondary);font-weight:300;line-height:1.5;}
+.flag-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.flag-dot.green{background:var(--green);}
+.flag-dot.red{background:var(--red);}
+
+/* ══════════════════════════
+   WHERE / APPROACH / PRICING TABS
+   ══════════════════════════ */
+#tab-nav{
+  border-bottom:1px solid var(--divider);
+  display:flex;gap:0;margin-bottom:0;
+  opacity:0;transition:opacity .5s ease;
+}
+#tab-nav.visible{opacity:1;}
+.tab-btn{padding:14px 20px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--muted);cursor:none;background:transparent;border:none;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;white-space:nowrap;position:relative;bottom:-1px;}
+.tab-btn:hover{color:var(--secondary);}
+.tab-btn.active{color:var(--black);border-bottom-color:var(--black);}
+
+.tab-panel{display:none;padding:36px 0 0;}
+.tab-panel.active{display:block;}
+
+.method-card{border:1.5px solid var(--divider);border-radius:16px;padding:20px 22px;display:flex;align-items:flex-start;gap:16px;margin-bottom:12px;background:rgba(255,255,255,.2);opacity:0;transform:translateX(-20px);transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1),border-color .2s;}
+.method-card.go{opacity:1;transform:translateX(0);}
+.method-card:hover{border-color:var(--secondary);}
+.method-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--divider);line-height:1;flex-shrink:0;}
+.method-text{font-size:13px;color:var(--secondary);line-height:1.75;font-weight:300;}
+.method-text strong{color:var(--black);font-weight:600;display:block;margin-bottom:4px;}
+
+.approach-script{border-left:2px solid var(--black);padding:18px 22px;border-radius:0 14px 14px 0;background:rgba(10,10,10,.04);margin-bottom:20px;font-size:13px;color:var(--secondary);line-height:1.8;font-weight:300;opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s ease;}
+.approach-script.go{opacity:1;transform:translateY(0);}
+.approach-script strong{color:var(--black);font-weight:600;}
+
+.pricing-grid{display:flex;flex-direction:column;gap:14px;}
+.price-tier{border:1.5px solid var(--divider);border-radius:18px;padding:22px;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1),border-color .3s;}
+.price-tier:hover{border-color:var(--secondary);}
+.price-tier.go{opacity:1;transform:translateY(0);}
+.price-tier.featured{border-color:var(--black);border-width:2px;}
+.tier-tag{font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:4px 10px;border-radius:50px;background:var(--divider);color:var(--secondary);display:inline-block;margin-top:8px;}
+.tier-tag.hot{background:var(--black);color:var(--cream);}
+.tier-price{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,48px);color:var(--black);line-height:.95;letter-spacing:.01em;margin-bottom:8px;}
+.tier-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.tier-desc{font-size:13px;color:var(--secondary);line-height:1.7;font-weight:300;}
+.section-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,5vw,40px);color:var(--black);line-height:.95;letter-spacing:.01em;margin-bottom:8px;}
+.section-sub{font-size:13px;color:var(--muted);font-weight:300;margin-bottom:28px;}
+
+/* CTA */
+#cta-section{margin-top:48px;background:var(--black);border-radius:20px;padding:32px;opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1);}
+#cta-section.go{opacity:1;transform:translateY(0);}
+.cta-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,52px);color:var(--cream);line-height:.93;margin-bottom:10px;}
+.cta-sub{font-size:13px;color:rgba(232,230,224,.45);font-weight:300;line-height:1.65;margin-bottom:24px;}
+.btn-primary{background:var(--cream);color:var(--black);border:none;padding:16px 40px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;transition:transform .25s,box-shadow .25s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,230,224,.15);}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="top-nav">
+  <div class="nav-row">
+    <span class="nav-logo">First Move</span>
+    <div class="nav-context">
+      <span class="nav-pill" id="nav-hustle">Hustle</span>
+      <span class="nav-pill" id="nav-niche">Niche</span>
+    </div>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+</div>
+
+<div id="page">
+  <div class="hero-eyebrow">Step 4 of 5 — Client Profile</div>
+  <h1 class="hero-title" id="hero-title">Ideal Client<br>Profile.</h1>
+  <p class="hero-sub">Two types of client. One you want. One you run from. Click a profile to meet them.</p>
+
+  <!-- PROFILE SELECTOR -->
+  <div class="profile-selector" id="profile-selector">
+    <div class="profile-icon-wrap">
+      <div class="click-hint" id="hint-ideal">Tap me</div>
+      <div class="profile-icon ideal-icon" id="icon-ideal">
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="20" r="12" stroke="#2D6A4F" stroke-width="2" fill="rgba(45,106,79,.08)"/>
+          <path d="M8 54c0-12.15 9.85-22 22-22s22 9.85 22 22" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round" fill="rgba(45,106,79,.08)"/>
+        </svg>
+      </div>
+      <span class="profile-label ideal-label">Ideal Client</span>
+      <span class="profile-sublabel">The one you want</span>
+    </div>
+    <div class="profile-icon-wrap">
+      <div class="click-hint" id="hint-walkaway" style="animation-delay:.9s">Tap me</div>
+      <div class="profile-icon walkaway-icon" id="icon-walkaway">
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="20" r="12" stroke="#8B2020" stroke-width="2" fill="rgba(139,32,32,.06)"/>
+          <path d="M8 54c0-12.15 9.85-22 22-22s22 9.85 22 22" stroke="#8B2020" stroke-width="2" stroke-linecap="round" fill="rgba(139,32,32,.06)"/>
+          <line x1="20" y1="14" x2="26" y2="20" stroke="#8B2020" stroke-width="2" stroke-linecap="round"/>
+          <line x1="26" y1="14" x2="20" y2="20" stroke="#8B2020" stroke-width="2" stroke-linecap="round"/>
+          <line x1="34" y1="14" x2="40" y2="20" stroke="#8B2020" stroke-width="2" stroke-linecap="round"/>
+          <line x1="40" y1="14" x2="34" y2="20" stroke="#8B2020" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="profile-label walkaway-label">Walk Away</span>
+      <span class="profile-sublabel">The one you avoid</span>
+    </div>
+  </div>
+
+  <!-- FIGURE STAGE -->
+  <div id="figure-stage">
+    <div class="figure-area" id="figure-area">
+      <!-- Silhouette container — inner SVG swapped dynamically per profile -->
+      <div id="stickman-wrap" style="width:110px;height:220px;position:relative;">
+        <svg id="stickman-svg" viewBox="0 0 110 220" xmlns="http://www.w3.org/2000/svg"
+             style="width:110px;height:220px;opacity:0;transform:translateY(16px) scale(.92);transition:opacity .45s ease,transform .45s cubic-bezier(.22,1,.36,1);">
+          <!-- filled silhouette — paths injected by buildStickman() -->
+          <g id="silhouette-group"></g>
+        </svg>
+      </div>
+      <div class="figure-nametag" id="figure-nametag"></div>
+    </div>
+    <div class="speech-wrap">
+      <div class="speech-bubble" id="speech-bubble">
+        <div id="speech-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL BOXES -->
+  <div id="detail-boxes"></div>
+
+  <!-- TABS: WHERE / APPROACH / PRICING -->
+  <div id="tab-nav">
+    <button class="tab-btn active" data-tab="where">Where to Find</button>
+    <button class="tab-btn" data-tab="approach">How to Approach</button>
+    <button class="tab-btn" data-tab="pricing">What to Charge</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-where">
+    <div class="section-title">Where to find them.</div>
+    <div class="section-sub">Four specific places your ideal client actually is.</div>
+    <div id="where-cards"></div>
+  </div>
+  <div class="tab-panel" id="panel-approach">
+    <div class="section-title">How to approach.</div>
+    <div class="section-sub">What to say. What to bring. What not to do.</div>
+    <div id="approach-content"></div>
+  </div>
+  <div class="tab-panel" id="panel-pricing">
+    <div class="section-title">What to charge.</div>
+    <div class="section-sub">Three tiers. Start at the bottom. Earn your way up.</div>
+    <div class="pricing-grid" id="pricing-content"></div>
+  </div>
+
+  <div id="cta-section">
+    <div class="cta-title">You know<br>your target.</div>
+    <p class="cta-sub">One page left. Your mission plan — the action that turns everything into your first client.</p>
+    <button class="btn-primary" id="btn-next">Show me my mission →</button>
+  </div>
+</div>
+
+<script>
+const cursor=document.getElementById("cursor");
+document.addEventListener("mousemove",e=>{cursor.style.left=e.clientX+"px";cursor.style.top=e.clientY+"px";});
+document.addEventListener("mouseover",e=>{cursor.classList.toggle("big",!!e.target.closest("button,.profile-icon,.method-card,.price-tier"));});
+
+const params=new URLSearchParams(window.location.search);
+const hustle=params.get("hustle")||"Social Media Management";
+const niche=params.get("niche")||"Fitness Brands";
+const recordId=params.get("id")||"";
+const userName=params.get("name")||"";
+document.getElementById("nav-hustle").textContent=hustle;
+document.getElementById("nav-niche").textContent=niche;
+
+// ── CLIENT DATA
+// ── AIRTABLE FETCH + PARSER
+const WORKER_CLIENT = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+let clientPolls = 0;
+let CLIENT_DATA = null;
+
+function cleanC(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
+
+function parseSpeech(raw, tagType){
+  // Split on [GREEN]...[/GREEN] or [RED]...[/RED] tags
+  const openTag  = tagType==='green' ? '[GREEN]' : '[RED]';
+  const closeTag = tagType==='green' ? '[/GREEN]' : '[/RED]';
+  const segments = [];
+  let remaining = raw;
+  while(remaining.length > 0){
+    const openIdx = remaining.indexOf(openTag);
+    if(openIdx === -1){
+      if(remaining.trim()) segments.push({text:remaining, type:'normal'});
+      break;
+    }
+    if(openIdx > 0){
+      segments.push({text:remaining.slice(0,openIdx), type:'normal'});
+    }
+    const closeIdx = remaining.indexOf(closeTag, openIdx);
+    if(closeIdx === -1){
+      segments.push({text:remaining.slice(openIdx+openTag.length), type:tagType});
+      break;
+    }
+    segments.push({text:remaining.slice(openIdx+openTag.length, closeIdx), type:tagType});
+    remaining = remaining.slice(closeIdx+closeTag.length);
+  }
+  return segments;
+}
+
+function parseClientProfile(raw){
+  const text = cleanC(raw);
+  const get = (key) => {
+    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|$)');
+    const m = text.match(re);
+    return m ? cleanC(m[1]) : '';
+  };
+  const getFlag = (prefix) => {
+    const flags = [];
+    for(let i=1;i<=6;i++){
+      const val = get(prefix+'_FLAG_'+i);
+      if(val) flags.push(val);
+    }
+    return flags;
+  };
+
+  const idealSpeechRaw   = get('IDEAL_SPEECH');
+  const walkSpeechRaw    = get('WALKAWAY_SPEECH');
+
+  return {
+    ideal:{
+      name:    get('IDEAL_NAME'),
+      speech:  parseSpeech(idealSpeechRaw, 'green'),
+      details:[
+        {type:'green', label:'Green Flags', items: getFlag('IDEAL')},
+        {type:'green', label:'What This Client Is Worth', text: get('IDEAL_WORTH')}
+      ]
+    },
+    walkaway:{
+      name:    get('WALKAWAY_NAME'),
+      speech:  parseSpeech(walkSpeechRaw, 'red'),
+      details:[
+        {type:'red', label:'Red Flags', items: getFlag('WALKAWAY')},
+        {type:'red', label:'What This Client Actually Costs You', text: get('WALKAWAY_COST')}
+      ]
+    }
+  };
+}
+
+function pollClient(){
+  if(!recordId){ loadFallbackClient(); return; }
+  fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      const raw = fields['Client Profile'] || fields['client_profile'] || '';
+      if(raw && raw.trim().length > 100){
+        CLIENT_DATA = parseClientProfile(raw);
+        // Trigger the profile buttons now that data is ready
+        initClientPage();
+      } else {
+        retryClient();
+      }
+    })
+    .catch(retryClient);
+}
+
+function retryClient(){
+  clientPolls++;
+  if(clientPolls < 15) setTimeout(pollClient, 3000);
+  else loadFallbackClient();
+}
+
+function loadFallbackClient(){
+  CLIENT_DATA = {
+    ideal:{
+      name:"Raj, Gym Owner",
+      speech:[
+        {text:"Hey. I run ", type:"normal"},
+        {text:"FitZone — 3 years open, 200 members, solid reputation", type:"green"},
+        {text:" in Koramangala. My Instagram has not been touched in 6 weeks. I need someone who ", type:"normal"},
+        {text:"takes full ownership", type:"green"},
+        {text:" and ", type:"normal"},
+        {text:"shows me results in 60 days", type:"green"},
+        {text:". I have already set aside ", type:"normal"},
+        {text:"a proper budget", type:"green"},
+        {text:" — not looking for cheap. Looking for good.", type:"normal"}
+      ],
+      details:[
+        {type:"green", label:"Green Flags", items:[
+          "Admits the problem unprompted — they have already done the hard part",
+          "Can name a specific loss caused by bad marketing",
+          "Too busy running the business to micromanage you",
+          "Competitors are visibly winning online — the pressure is already there",
+          "Paying customers exist and money is already moving",
+          "Asks for ownership and results, not a list of deliverables"
+        ]},
+        {type:"green", label:"What This Client Is Worth", text:"A gym owner with 200 members is pulling ₹4L–₹8L/month in revenue. Spending ₹8,000–₹15,000 on someone who grows that is obvious math to them. Show one new enquiry that came from Instagram and your retainer is secure for months."}
+      ]
+    },
+    walkaway:{
+      name:"Vikram, Serial Complainer",
+      speech:[
+        {text:"I need ", type:"normal"},
+        {text:"guaranteed results. 10,000 followers, minimum", type:"red"},
+        {text:". I will need to ", type:"normal"},
+        {text:"approve everything before it goes live", type:"red"},
+        {text:". My last two managers ", type:"normal"},
+        {text:"just did not get my vision", type:"red"},
+        {text:". Can you start ", type:"normal"},
+        {text:"for free for the first month", type:"red"},
+        {text:"?", type:"normal"}
+      ],
+      details:[
+        {type:"red", label:"Red Flags", items:[
+          "Demands follower guarantees — no honest professional can promise this",
+          "Wants approval on every single post — this is unpaid employment",
+          "Has already fired multiple managers and blames all of them",
+          "Adds scope before you have even agreed on price",
+          "Asks for a free first month — he has done this before",
+          "Frames everything as a test you have to pass"
+        ]},
+        {type:"red", label:"What This Client Actually Costs You", text:"It is not just the money. A client like this takes 3x the hours, sends messages at 11pm, and leaves a bad review when you walk away. At this stage one bad client can make you quit entirely. Walk away before the first invoice."}
+      ]
+    }
+  };
+  initClientPage();
+}
+
+function initClientPage(){
+  // Re-enable the profile icon buttons now that CLIENT_DATA is ready
+  const iconIdeal    = document.getElementById('icon-ideal');
+  const iconWalkaway = document.getElementById('icon-walkaway');
+  if(iconIdeal)    iconIdeal.style.opacity    = '1';
+  if(iconWalkaway) iconWalkaway.style.opacity = '1';
+}
+
+// Start poll
+pollClient();
+
+const WHERE_DATA=[
+  {title:"Instagram Search",text:"Search your city plus your niche — 'Bengaluru gym' or 'Bengaluru fitness studio'. Filter accounts with 200 to 2000 followers. Look for inconsistent posting and weak captions. These are your warmest prospects."},
+  {title:"Google Maps",text:"Search your niche in your city. Every business without a linked Instagram or with a dead profile is a potential client. If their website hasn't updated in a year, they\'re ignoring digital entirely."},
+  {title:"Local Facebook Groups",text:"Groups like 'Bengaluru Fitness Community' or 'Small Business Bengaluru' are full of business owners posting with no engagement. That low engagement is the pain point you solve."},
+  {title:"Walk In",text:"Go to 3 gyms near you. Ask for the owner. Bring a printed one-page audit of their Instagram — 3 things wrong, what you'd fix. Nobody does this. It's immediately memorable."}
+];
+const APPROACH_DATA=[
+  {type:"script",label:"The Opening Message",text:"Don't pitch in the first message. Send an observation: \"Hey [name], I noticed your reach dropped since you switched to text-only posts in March. I work with fitness businesses in Bengaluru on exactly this. Would a quick breakdown of what I'd change be useful?\" Short, specific, valuable. You're not asking for money yet."},
+  {type:"script",label:"What to Bring",text:"A one-page audit of their current Instagram. Screenshot their last 9 posts. Note average engagement. Find one competitor doing it better and explain why. Printed or on your phone. 30 minutes of prep that communicates more than any pitch deck."},
+  {type:"script",label:"When They Say What's Your Experience",text:"Don't lie and don\'t panic. Say: \"I'm building my portfolio specifically in this niche. I'd like to offer you the first month at a reduced rate in exchange for honest feedback and a testimonial if you\'re happy.\" Confidence beats credentials at this stage."}
+];
+const PRICING_DATA=[
+  {label:"Starter",price:"₹5,000",per:"/mo",desc:"3 posts per week, basic captions, monthly report. Your first client rate — you\'re buying a testimonial as much as earning money.",tag:"First client only",hot:false},
+  {label:"Standard",price:"₹10,000",per:"/mo",desc:"5 posts per week, captions, Stories, monthly analytics report, one round of revisions. Once you have one testimonial. Most clients will be here.",tag:"Your target rate",hot:true,featured:true},
+  {label:"Premium",price:"₹18,000",per:"/mo",desc:"Daily content, full strategy, competitor monitoring, detailed reporting. Don't charge this until you have 3 months of results. When you do — don\'t be afraid.",tag:"After proof",hot:false}
+];
+
+// BUILD WHERE
+const whereEl=document.getElementById("where-cards");
+WHERE_DATA.forEach((w,i)=>{
+  const d=document.createElement("div");
+  d.className="method-card";
+  d.style.transitionDelay=(i*.08)+"s";
+  d.innerHTML=`<span class="method-num">0${i+1}</span><div class="method-text"><strong>${w.title}</strong>${w.text}</div>`;
+  whereEl.appendChild(d);
+});
+
+// BUILD APPROACH
+const approachEl=document.getElementById("approach-content");
+APPROACH_DATA.forEach((a,i)=>{
+  const d=document.createElement("div");
+  d.className="approach-script";
+  d.style.transitionDelay=(i*.12)+"s";
+  d.innerHTML=`<strong>${a.label}</strong><br><br>${a.text}`;
+  approachEl.appendChild(d);
+});
+
+// BUILD PRICING
+const pricingEl=document.getElementById("pricing-content");
+PRICING_DATA.forEach((p,i)=>{
+  const d=document.createElement("div");
+  d.className="price-tier"+(p.featured?" featured":"");
+  d.style.transitionDelay=(i*.1)+"s";
+  d.innerHTML=`<div class="tier-label">${p.label}</div><div class="tier-price">${p.price}<span style="font-size:16px;opacity:.5;">${p.per}</span></div><p class="tier-desc">${p.desc}</p><span class="tier-tag${p.hot?" hot":""}">${p.tag}</span>`;
+  pricingEl.appendChild(d);
+});
+
+// TABS
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelector(".tab-btn.active")?.classList.remove("active");
+    document.querySelector(".tab-panel.active")?.classList.remove("active");
+    btn.classList.add("active");
+    const panel=document.getElementById("panel-"+btn.dataset.tab);
+    if(!panel) return;
+    panel.classList.add("active");
+    // trigger anims
+    setTimeout(()=>{
+      panel.querySelectorAll(".method-card,.approach-script,.price-tier").forEach(el=>el.classList.add("go"));
+    },50);
+  });
+});
+
+// ── STICKMAN SYSTEM
+let currentType=null;
+let typewriterTimer=null;
+
+document.getElementById("icon-ideal").addEventListener("click",()=>activateProfile("ideal"));
+document.getElementById("icon-walkaway").addEventListener("click",()=>activateProfile("walkaway"));
+
+function hideHints(){
+  document.getElementById("hint-ideal")?.classList.add("hidden");
+  document.getElementById("hint-walkaway")?.classList.add("hidden");
+}
+
+function activateProfile(type){
+  if(!CLIENT_DATA){ return; } // wait for data
+  hideHints();
+  if(currentType===type) return;
+  currentType=type;
+  const data=CLIENT_DATA[type];
+
+  // Icon states
+  document.getElementById("icon-ideal").classList.toggle("active-icon",type==="ideal");
+  document.getElementById("icon-walkaway").classList.toggle("active-icon",type==="walkaway");
+
+  // Show stage
+  const stage=document.getElementById("figure-stage");
+  stage.classList.add("visible");
+
+  // Reset speech
+  clearTimeout(typewriterTimer);
+  document.getElementById("speech-text").innerHTML="";
+  document.getElementById("speech-bubble").classList.remove("visible");
+  // Clear detail boxes immediately on switch
+  const detailBox=document.getElementById("detail-boxes");
+  detailBox.innerHTML="";
+  detailBox.classList.remove("visible");
+
+  // Speech bubble style
+  const bubble=document.getElementById("speech-bubble");
+  bubble.className="speech-bubble "+(type==="ideal"?"ideal-bubble":"walkaway-bubble");
+
+  // Build stickman
+  buildStickman(type, data, ()=>{
+    // After build, show speech bubble and type text
+    setTimeout(()=>{
+      bubble.classList.add("visible");
+      setTimeout(()=>typewriteSpeech(data.speech, type, ()=>{
+        // Detail boxes slide in only after typing finishes
+        setTimeout(()=>showDetailBoxes(data.details, type), 400);
+      }),300);
+    },200);
+  });
+}
+
+function buildStickman(type, data, onDone){
+  const svg = document.getElementById("stickman-svg");
+  const group = document.getElementById("silhouette-group");
+  if(!svg || !group) { if(onDone) onDone(); return; }
+
+  const col = type==="ideal" ? "#2D6A4F" : "#8B2020";
+
+  /*
+   * IDEAL — angular, confident, leaning slightly forward, one arm out gesturing
+   * Sharp polygon shapes, upright proud stance
+   *
+   * WALKAWAY — rounded, slouchy, arms crossed, weight shifted
+   * Soft round shapes, hunched defensive stance
+   */
+  const SHAPES = {
+    ideal: [
+      // Head — angular, slightly tilted right (confident tilt)
+      `<ellipse cx="57" cy="22" rx="14" ry="15" fill="COL" transform="rotate(-6,57,22)"/>`,
+      // Torso — broad angular trapezoid, leaning forward
+      `<polygon points="38,36 72,36 78,100 32,100" fill="COL"/>`,
+      // Right arm — extended outward and forward (gesturing / pointing)
+      `<polygon points="70,44 82,40 108,82 94,88" fill="COL" rx="4"/>`,
+      // Left arm — down at side, slight angle
+      `<polygon points="40,44 30,42 14,90 26,94" fill="COL"/>`,
+      // Left leg — stride forward
+      `<polygon points="38,98 54,98 44,210 28,208" fill="COL"/>`,
+      // Right leg — planted back slightly
+      `<polygon points="56,98 72,98 82,208 66,210" fill="COL"/>`,
+    ],
+    walkaway: [
+      // Head — rounder, slightly drooped (chin down)
+      `<ellipse cx="52" cy="24" rx="16" ry="17" fill="COL" transform="rotate(4,52,24)"/>`,
+      // Torso — rounded, narrower at top, slouched
+      `<path d="M36,40 Q52,36 68,40 L72,104 Q52,108 32,104 Z" fill="COL"/>`,
+      // Right arm — crossed over body (defensive)
+      `<polygon points="64,50 74,46 66,92 52,94" fill="COL"/>`,
+      // Left arm — crossed over body the other way
+      `<polygon points="40,50 28,48 30,92 46,94" fill="COL"/>`,
+      // Left leg — close together, weight shifting left
+      `<path d="M38,102 Q44,102 50,102 L46,212 Q36,212 30,210 Z" fill="COL"/>`,
+      // Right leg — close together
+      `<path d="M54,102 Q60,102 66,104 L72,210 Q62,212 56,212 Z" fill="COL"/>`,
+    ]
+  };
+
+  const parts = SHAPES[type].map(p => p.replace(/COL/g, col));
+
+  // Clear old
+  group.innerHTML = "";
+
+  // Build part elements, all invisible
+  const els = parts.map(p => {
+    const tmp = document.createElementNS("http://www.w3.org/2000/svg","g");
+    tmp.innerHTML = p;
+    const child = tmp.firstElementChild;
+    child.style.opacity = "0";
+    child.style.transform = "translateY(8px)";
+    child.style.transition = "opacity .25s ease, transform .3s cubic-bezier(.22,1,.36,1)";
+    group.appendChild(child);
+    return child;
+  });
+
+  // Fade in SVG container
+  svg.style.opacity = "0";
+  svg.style.transform = "translateY(16px) scale(.92)";
+  setTimeout(()=>{
+    svg.style.opacity = "1";
+    svg.style.transform = "translateY(0) scale(1)";
+  }, 60);
+
+  // Reveal each part sequentially bottom-up feel: head → torso → arms → legs
+  els.forEach((el, i) => {
+    setTimeout(()=>{
+      el.style.opacity = "1";
+      el.style.transform = "translateY(0)";
+      if(i === els.length - 1){
+        const tag = document.getElementById("figure-nametag");
+        if(tag){
+          tag.textContent = data.name;
+          tag.className = "figure-nametag visible " + (type==="ideal"?"ideal":"walkaway");
+        }
+        if(onDone) setTimeout(onDone, 160);
+      }
+    }, 80 + i * 90);
+  });
+}
+
+// ── TYPEWRITER
+function typewriteSpeech(segments, type, onDone){
+  const el=document.getElementById("speech-text");
+  el.innerHTML="";
+  const headGroup=document.getElementById("head-group");
+  if(headGroup) headGroup.classList.add("talking");
+
+  // Flatten into chars with their type
+  const chars=[];
+  segments.forEach(seg=>{
+    [...seg.text].forEach(ch=>chars.push({ch,type:seg.type}));
+  });
+
+  let i=0;
+  let lastSpan=null; // track the actual last span — don\'t query DOM
+  let lastType=null;
+
+  // Add typing cursor
+  const cursorEl=document.createElement("span");
+  cursorEl.className="typing-cursor";
+  el.appendChild(cursorEl);
+
+  function typeNext(){
+    if(i>=chars.length){
+      cursorEl.remove();
+      if(headGroup) headGroup.classList.remove("talking");
+      if(onDone) onDone();
+      return;
+    }
+    const {ch,type:ctype}=chars[i];
+    if(lastSpan && lastType===ctype){
+      lastSpan.textContent+=ch;
+    } else {
+      const span=document.createElement("span");
+      span.className="current-seg"+(ctype==="green"?" highlight-green":ctype==="red"?" highlight-red":"");
+      span.textContent=ch;
+      el.insertBefore(span,cursorEl);
+      lastSpan=span;
+      lastType=ctype;
+    }
+    i++;
+    const delay=ch==="."||ch===","||ch==="?"?140:ch===" "?38:20;
+    typewriterTimer=setTimeout(typeNext,delay);
+  }
+  typeNext();
+}
+
+// ── DETAIL BOXES
+function showDetailBoxes(details, type){
+  const box=document.getElementById("detail-boxes");
+  box.innerHTML="";
+  box.classList.add("visible");
+  details.forEach((d,i)=>{
+    const el=document.createElement("div");
+    el.className="detail-box "+(d.type==="green"?"green-box":"red-box");
+    let inner=`<div class="detail-box-label">${d.label}</div>`;
+    if(d.items){
+      inner+=`<div class="flag-list">${d.items.map(item=>`<div class="flag-item"><div class="flag-dot ${d.type}"></div>${item}</div>`).join("")}</div>`;
+    } else if(d.text){
+      inner+=`<p>${d.text}</p>`;
+    }
+    el.innerHTML=inner;
+    box.appendChild(el);
+    setTimeout(()=>el.classList.add("go"),100+i*100);
+  });
+}
+
+// Show tabs after a moment
+setTimeout(()=>{
+  document.getElementById("tab-nav").classList.add("visible");
+  document.querySelectorAll(".method-card").forEach(el=>el.classList.add("go"));
+},600);
+
+// HERO ANIMATIONS
+setTimeout(()=>{
+  document.querySelector(".hero-eyebrow")?.classList.add("go");
+  setTimeout(()=>document.getElementById("hero-title")?.classList.add("go"),120);
+  setTimeout(()=>document.getElementById("hero-sub")?.classList.add("go"),240);
+  setTimeout(()=>document.getElementById("profile-selector")?.classList.add("go"),380);
+},100);
+
+// Show CTA
+setTimeout(()=>document.getElementById("cta-section")?.classList.add("go"),1200);
+
+// NEXT
+document.getElementById("btn-next").addEventListener("click",()=>{
+  window.location.href=`mission.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
+});
+
+// BREATHING
+(function(){
+  let t=Math.random()*Math.PI*2;
+  function breath(){
+    t+=0.006;
+    const mix=(Math.sin(t)+1)/2;
+    document.body.style.backgroundColor=`rgb(${Math.round(232+(222-232)*mix)},${Math.round(230+(218-230)*mix)},${Math.round(224+(211-224)*mix)})`;
+    requestAnimationFrame(breath);
+  }
+  requestAnimationFrame(breath);
+})();
+
+// EASTER EGG
+let lc=0,lt;
+document.querySelector(".nav-logo")?.addEventListener("click",()=>{
+  lc++;clearTimeout(lt);lt=setTimeout(()=>lc=0,1500);
+  if(lc>=5){lc=0;const el=document.createElement("div");el.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:#E8E6E0;padding:16px 24px;border-radius:12px;font-family:Space Grotesk,sans-serif;font-size:12px;max-width:380px;text-align:center;z-index:9998;opacity:0;transition:opacity .4s ease;line-height:1.6;";el.textContent="You got one life to live. Why wait until tomorrow to start it?";document.body.appendChild(el);requestAnimationFrame(()=>el.style.opacity="1");setTimeout(()=>{el.style.opacity="0";setTimeout(()=>el.remove(),500);},2500);}
+});
+</script>
+</body>
+</html>
