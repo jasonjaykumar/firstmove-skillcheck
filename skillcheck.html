@@ -128,7 +128,8 @@ body::before{
   font-size:clamp(28px,5vw,52px);
   color:var(--black);line-height:1.0;
   letter-spacing:.01em;
-  align-self:flex-start;max-width:600px;width:100%;
+  text-align:center;
+  align-self:center;max-width:600px;width:100%;
   margin-bottom:32px;
 }
 
@@ -136,6 +137,7 @@ body::before{
 .options{
   display:flex;flex-direction:column;gap:10px;
   width:100%;max-width:600px;
+  align-self:center;
 }
 .option{
   border:1.5px solid var(--divider);
@@ -400,77 +402,99 @@ body::before{
 
 <script>
 // ══════════════════════════════════════════
-// DATA — pulled from URL params in real use
-// These are placeholders for design preview
-// In production: questions come from Airtable
-// via the Cloudflare Worker using ?id=recXXX
+// CONFIG
 // ══════════════════════════════════════════
-const SKILL_AREA = 'Social Media Marketing';
+const WORKER   = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+const S3_HOOK  = 'https://hook.eu1.make.com/7x4tvsugf9e3qi4dwkljkoumgc481d9g';
+const params   = new URLSearchParams(window.location.search);
+const recordId = params.get('id') || '';
 
-const QUESTIONS = [
-  {
-    q: "What does CTR stand for and what does a good benchmark look like?",
-    opts: [
-      "Click-Through Rate — a good CTR for social ads is typically 1-3%, though this varies heavily by platform and industry.",
-      "Content Transfer Ratio — measures how well your content moves between platforms, with 80%+ considered strong performance.",
-      "Customer Targeting Reach — reflects the percentage of your target audience successfully reached by a campaign."
-    ],
-    correct: 0
-  },
-  {
-    q: "A client wants more engagement but their posts get zero comments. What's your first move?",
-    opts: [
-      "Tell them to post more frequently and use more hashtags to increase their overall reach and visibility.",
-      "Audit their content format — engagement drops when posts don't invite a response. Add questions, polls, or opinion prompts.",
-      "Switch all content to video immediately, since video always outperforms static images on every platform."
-    ],
-    correct: 1
-  },
-  {
-    q: "What's the difference between reach and impressions?",
-    opts: [
-      "They're the same metric — both count the total number of times your content was displayed to users on the platform.",
-      "Reach is the number of unique accounts that saw the post. Impressions count total views including multiple views by one person.",
-      "Reach tracks organic views only while impressions include paid promotion, making impressions always the higher number."
-    ],
-    correct: 1
-  },
-  {
-    q: "A client's Instagram growth has stalled at 800 followers for 3 months. What do you diagnose first?",
-    opts: [
-      "The account needs a complete visual rebrand — stagnation is almost always caused by an inconsistent or unappealing aesthetic.",
-      "Check posting consistency, content mix, and whether they're actively engaging in comments on similar accounts in their niche.",
-      "Immediately run a giveaway campaign to force follower growth — this is the fastest proven method for breaking a plateau."
-    ],
-    correct: 1
-  },
-  {
-    q: "What is a content pillar strategy and why does it matter for a client?",
-    opts: [
-      "A content pillar strategy organises posting around 3-5 core themes so every post reinforces brand identity and attracts the right audience consistently.",
-      "It's a scheduling system where content is posted at specific times each day, with the pillar being the anchor post that all other posts support.",
-      "Content pillars are viral post formats that proven creators use — copying them gives a new account a structural advantage in the algorithm."
-    ],
-    correct: 0
-  },
-  {
-    q: "Your client has 2,000 followers but their posts average 8 likes. What does this tell you?",
-    opts: [
-      "Their follower count is too low to generate significant engagement — they need at least 10,000 followers before engagement metrics matter.",
-      "The account likely has a large number of ghost followers or bot accounts, and the real engaged audience is much smaller than reported.",
-      "An engagement rate of 0.4% signals the content isn't resonating or the audience isn't the right fit — both need to be investigated."
-    ],
-    correct: 2
+let QUESTIONS  = [];
+let SKILL_AREA = 'Your Skills';
+let pollCount  = 0;
+
+// ══════════════════════════════════════════
+// PARSE QUESTIONS FROM AIRTABLE
+// ══════════════════════════════════════════
+function parseQuestions(raw){
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const questions = [];
+  let current = null;
+
+  for(let i=0; i<lines.length; i++){
+    const line = lines[i];
+    if(line.match(/^Q\d+:/i)){
+      if(current) questions.push(current);
+      current = { q: line.replace(/^Q\d+:\s*/i,''), opts:[], correct:0 };
+    } else if(line.match(/^A\)/i) && current){
+      current.opts[0] = line.replace(/^A\)\s*/i,'');
+    } else if(line.match(/^B\)/i) && current){
+      current.opts[1] = line.replace(/^B\)\s*/i,'');
+    } else if(line.match(/^C\)/i) && current){
+      current.opts[2] = line.replace(/^C\)\s*/i,'');
+    } else if(line.match(/^Correct:/i) && current){
+      const ans = line.replace(/^Correct:\s*/i,'').trim().toUpperCase();
+      current.correct = ans === 'A' ? 0 : ans === 'B' ? 1 : 2;
+    }
   }
-];
+  if(current) questions.push(current);
+  return questions.filter(q=>q.opts.length===3);
+}
+
+function pollQuestions(){
+  if(!recordId){ loadFallbackQuestions(); return; }
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      const raw    = fields['Skill Check Questions'] || fields['skill_check_questions'] || '';
+      const area   = fields['skillArea'] || fields['Skills'] || 'Your Skills';
+      if(raw && raw.trim().length > 50){
+        const parsed = parseQuestions(raw);
+        if(parsed.length >= 3){
+          QUESTIONS  = parsed;
+          SKILL_AREA = area;
+          initQuiz();
+        } else { retryPoll(); }
+      } else { retryPoll(); }
+    })
+    .catch(retryPoll);
+}
+
+function retryPoll(){
+  pollCount++;
+  if(pollCount < 15) setTimeout(pollQuestions, 3000);
+  else loadFallbackQuestions();
+}
+
+function loadFallbackQuestions(){
+  QUESTIONS = [
+    {q:"A client wants more engagement but their posts get zero comments. What's your first move?",opts:["Tell them to post more frequently and use more hashtags to increase their overall reach and visibility.","Audit their content format — engagement drops when posts don't invite a response. Add questions, polls, or opinion prompts.","Switch all content to video immediately, since video always outperforms static images on every platform."],correct:1},
+    {q:"What's the difference between reach and impressions?",opts:["They're the same metric — both count the total number of times your content was displayed to users on the platform.","Reach is the number of unique accounts that saw the post. Impressions count total views including multiple views by one person.","Reach tracks organic views only while impressions include paid promotion, making impressions always the higher number."],correct:1},
+    {q:"A client's Instagram growth has stalled at 800 followers for 3 months. What do you diagnose first?",opts:["The account needs a complete visual rebrand — stagnation is almost always caused by an inconsistent or unappealing aesthetic.","Check posting consistency, content mix, and whether they're actively engaging in comments on similar accounts in their niche.","Immediately run a giveaway campaign to force follower growth — this is the fastest proven method for breaking a plateau."],correct:1},
+    {q:"Your client posts at 8am every day. Their insights show peak audience activity at 7pm. What do you do?",opts:["Keep posting at 8am — consistency matters more than timing and changing the schedule will confuse the algorithm.","Switch immediately to 7pm and tell the client the change will show results within 48 hours.","Test 7pm posting for two weeks, track the engagement difference, then present the data to the client before making it permanent."],correct:2},
+    {q:"A client asks you to guarantee 10,000 followers in 30 days. How do you respond?",opts:["Accept the target — setting ambitious goals pushes you to work harder and clients respect confidence.","Explain that follower growth depends on content quality, consistency, and audience fit — you can guarantee the work, not the exact number.","Decline the project immediately — any client who sets follower targets is not worth working with."],correct:1},
+    {q:"What does a content calendar actually do for a small business client?",opts:["It guarantees viral posts by pre-planning content around trending topics and algorithm peak times.","It creates posting consistency, reduces last-minute decisions, and lets the client review and approve content in advance.","It's mainly for the client's benefit — professional social media managers don't actually need to plan content in advance."],correct:1}
+  ];
+  initQuiz();
+}
 
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
 let current = 0;
-let answers = new Array(QUESTIONS.length).fill(null);
+let answers  = [];
 let selected = null;
 
+function initQuiz(){
+  answers = new Array(QUESTIONS.length).fill(null);
+  buildQuestionScreens();
+  document.getElementById('progress-fill').style.width = `${(1/QUESTIONS.length)*100}%`;
+  document.getElementById('q-counter').textContent = `Question 1 of ${QUESTIONS.length}`;
+}
+
+
+    correct: 1
 // ══════════════════════════════════════════
 // CURSOR
 // ══════════════════════════════════════════
@@ -487,48 +511,52 @@ document.addEventListener('mouseover', e => {
 // ══════════════════════════════════════════
 // BUILD PROGRESS DOTS
 // ══════════════════════════════════════════
-const dotsEl = document.getElementById('progress-dots');
-QUESTIONS.forEach((_, i) => {
-  const d = document.createElement('div');
-  d.className = 'progress-dot' + (i === 0 ? ' active' : '');
-  d.id = `dot-${i}`;
-  dotsEl.appendChild(d);
-});
-
+// BUILD QUESTION SCREENS — called after data loads
 // ══════════════════════════════════════════
-// BUILD QUESTION SLIDES
-// ══════════════════════════════════════════
-const stage = document.getElementById('stage');
+function buildQuestionScreens(){
+  // Build progress dots
+  const dotsEl = document.getElementById('progress-dots');
+  dotsEl.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'progress-dot' + (i === 0 ? ' active' : '');
+    d.id = `dot-${i}`;
+    dotsEl.appendChild(d);
+  });
 
-QUESTIONS.forEach((q, qi) => {
-  const slide = document.createElement('div');
-  slide.className = 'q-slide' + (qi === 0 ? ' active' : '');
-  slide.id = `slide-${qi}`;
-
-  slide.innerHTML = `
-    <div class="q-label">${SKILL_AREA} — Q${qi+1}</div>
-    <div class="q-text">${q.q}</div>
-    <div class="options" id="opts-${qi}">
-      ${q.opts.map((opt, oi) => `
-        <div class="option" data-q="${qi}" data-i="${oi}">
-          <span class="option-letter">${String.fromCharCode(65+oi)}</span>
-          <span class="option-text">${opt}</span>
-        </div>
-      `).join('')}
-    </div>
-    <div class="btn-row">
-      <button class="q-back" id="back-${qi}" ${qi === 0 ? 'style="visibility:hidden"' : ''}>← Back</button>
-      <button class="q-next" id="next-${qi}">
-        ${qi < QUESTIONS.length - 1 ? 'Next →' : 'Submit Answers'}
-      </button>
-    </div>
-  `;
-  stage.appendChild(slide);
-});
+  // Build question slides
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  QUESTIONS.forEach((q, qi) => {
+    const slide = document.createElement('div');
+    slide.className = 'q-slide' + (qi === 0 ? ' active' : '');
+    slide.id = `slide-${qi}`;
+    slide.innerHTML = `
+      <div class="q-label">${SKILL_AREA} — Q${qi+1}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options" id="opts-${qi}">
+        ${q.opts.map((opt, oi) => `
+          <div class="option" data-q="${qi}" data-i="${oi}">
+            <span class="option-letter">${String.fromCharCode(65+oi)}</span>
+            <span class="option-text">${opt}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="btn-row">
+        <button class="q-back" id="back-${qi}" ${qi === 0 ? 'style="visibility:hidden"' : ''}>← Back</button>
+        <button class="q-next" id="next-${qi}">
+          ${qi < QUESTIONS.length - 1 ? 'Next →' : 'Submit Answers'}
+        </button>
+      </div>
+    `;
+    stage.appendChild(slide);
+  });
+}
 
 // ══════════════════════════════════════════
 // OPTION CLICK + RIPPLE
 // ══════════════════════════════════════════
+const stage = document.getElementById('stage');
 stage.addEventListener('click', e => {
   const opt = e.target.closest('.option');
   if(!opt) return;
@@ -673,16 +701,27 @@ function submitAnswers(){
     document.getElementById('grading-bar-fill').classList.add('go');
   }, 100);
 
-  // In production: POST to Make webhook with answers
-  // const payload = buildPayload();
-  // fetch(WEBHOOK_URL, { method:'POST', body: JSON.stringify(payload) })
-  // Then redirect to results.html?id=recXXX
+  // POST answers to S3 — Grading + Learning Path
+  const payload = {
+    id: recordId,
+    q1: answers[0] === 0 ? 'A' : answers[0] === 1 ? 'B' : 'C',
+    q2: answers[1] === 0 ? 'A' : answers[1] === 1 ? 'B' : 'C',
+    q3: answers[2] === 0 ? 'A' : answers[2] === 1 ? 'B' : 'C',
+    q4: answers[3] === 0 ? 'A' : answers[3] === 1 ? 'B' : 'C',
+    q5: answers[4] === 0 ? 'A' : answers[4] === 1 ? 'B' : 'C',
+    q6: answers[5] === 0 ? 'A' : answers[5] === 1 ? 'B' : 'C',
+    skillArea: SKILL_AREA
+  };
 
-  // For design preview — redirect after grading animation
+  fetch(S3_HOOK, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).catch(err => console.warn('S3 webhook error:', err));
+
+  // Redirect to results after grading animation
   setTimeout(() => {
-    // window.location.href = `results.html?id=${recordId}`;
-    console.log('Answers:', answers);
-    console.log('Would redirect to results.html');
+    window.location.href = `results.html?id=${encodeURIComponent(recordId)}`;
   }, 3800);
 }
 
@@ -704,8 +743,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Init progress bar
-document.getElementById('progress-fill').style.width = `${(1/QUESTIONS.length)*100}%`;
+// Start — fetch questions from Airtable
+pollQuestions();
 
 // ── BREATHING BACKGROUND (cream)
 (function(){

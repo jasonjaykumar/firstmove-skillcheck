@@ -565,6 +565,15 @@ document.querySelector('.nav-logo')?.addEventListener('click',()=>{
 });
 
 // ── START
+// Fire S8A — Module Framework Generator (first load only)
+if(recordId){
+  fetch('https://hook.eu1.make.com/v7fcbng91bjuwcxvi7qli7g3tkw1xo2v',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:recordId, hustle, niche, name:userName})
+  }).catch(e=>console.warn('S8A webhook error:',e));
+}
+
 poll();
 </script>
 </body>

@@ -866,6 +866,13 @@ setTimeout(()=>document.getElementById("cta-section")?.classList.add("go"),1200)
 
 // NEXT
 document.getElementById("btn-next").addEventListener("click",()=>{
+  // Fire S6 — Motivational Speech + Mission Plan
+  fetch('https://hook.eu1.make.com/19xogi72ha1fv2prg6opabcuj71xydsq',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:recordId, hustle, niche})
+  }).catch(e=>console.warn('S6 webhook error:',e));
+
   window.location.href=`mission.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
 });
 

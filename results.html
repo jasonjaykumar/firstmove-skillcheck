@@ -215,10 +215,55 @@ document.addEventListener('mouseover', e => {
 });
 
 // PARAMS
-const params = new URLSearchParams(window.location.search);
-const STATUS = params.get('status') || 'ALMOST';
-const SCORE  = parseInt(params.get('score') || '7');
-const NAME   = params.get('name') || 'Jason';
+const params   = new URLSearchParams(window.location.search);
+const recordId = params.get('id') || '';
+const NAME     = params.get('name') || 'You';
+
+// AIRTABLE FETCH
+const WORKER  = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+let pollCount = 0;
+
+function cleanR(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').trim(); }
+
+function parseGrade(raw){
+  const get = (key) => {
+    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|$)');
+    const m  = raw.match(re);
+    return m ? cleanR(m[1]) : '';
+  };
+  const statusRaw = get('STATUS').toUpperCase().trim();
+  const status    = ['READY','ALMOST','NOT_READY'].includes(statusRaw) ? statusRaw : 'ALMOST';
+  const scoreStr  = get('SCORE').replace('/12','').trim();
+  const score     = parseInt(scoreStr) || 7;
+  const breakdown = get('BREAKDOWN') || get('breakdown') || '';
+  return { status, score, breakdown };
+}
+
+function pollResults(){
+  if(!recordId){ applyData('ALMOST', 7, '', NAME); return; }
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      const raw    = fields['Grade'] || fields['grade'] || '';
+      const name   = fields['Name'] || fields['name'] || NAME;
+      if(raw && raw.trim().length > 20){
+        const {status, score, breakdown} = parseGrade(raw);
+        applyData(status, score, breakdown, name);
+      } else {
+        pollCount++;
+        if(pollCount < 15) setTimeout(pollResults, 3000);
+        else applyData('ALMOST', 7, '', NAME);
+      }
+    })
+    .catch(()=>{
+      pollCount++;
+      if(pollCount < 15) setTimeout(pollResults, 3000);
+      else applyData('ALMOST', 7, '', NAME);
+    });
+}
+
+function applyData(STATUS, SCORE, BREAKDOWN, name){
 
 // STATUS CONFIG
 const cfg = {
@@ -262,9 +307,14 @@ badge.innerHTML = `<span class="badge-dot"></span><span>${cfg.badgeText}</span>`
 document.getElementById('headline').innerHTML = cfg.headline;
 document.getElementById('breakdown-card').className = `breakdown-card ${cfg.badgeClass}`;
 document.getElementById('breakdown-card-text').textContent = cfg.cardText;
-document.getElementById('nav-name').textContent = NAME;
+document.getElementById('nav-name').textContent = name;
 document.getElementById('btn-continue').textContent = cfg.btnContinue;
 document.getElementById('btn-arsenal').textContent = cfg.btnArsenal;
+
+// Show personalised breakdown if available
+if(BREAKDOWN && BREAKDOWN.length > 10){
+  document.getElementById('breakdown-text').textContent = BREAKDOWN;
+}
 
 // REVEAL MAP
 const revealMap = [
@@ -313,19 +363,20 @@ function startCounter(){
   requestAnimationFrame(tick);
 }
 
-// ══════════════════════════════════════
+} // end applyData
 
 // BUTTONS
 function goToRecommendations(){
-  const id = params.get('id') || '';
-  window.location.href = `recommendations.html?id=${id}`;
+  window.location.href = `recommendations.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
 }
 function goToArsenal(){
-  const id = params.get('id') || '';
-  window.location.href = `arsenal.html?id=${id}&status=${STATUS}&score=${SCORE}&name=${NAME}`;
+  window.location.href = `arsenal.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
 }
-['btn-continue'].forEach(id=>{ document.getElementById(id)?.addEventListener('click', goToRecommendations); });
-['btn-arsenal'].forEach(id=>{ document.getElementById(id)?.addEventListener('click', goToArsenal); });
+document.getElementById('btn-continue')?.addEventListener('click', goToRecommendations);
+document.getElementById('btn-arsenal')?.addEventListener('click', goToArsenal);
+
+// START
+pollResults();
 
 // ── BREATHING BACKGROUND
 (function(){

@@ -928,7 +928,17 @@ document.getElementById('modal-back').addEventListener('click',()=>{
 
 document.getElementById('modal-confirm').addEventListener('click',()=>{
   const p=new URLSearchParams(window.location.search);
-  window.location.href=`niche.html?id=${p.get('id')||''}&hustle=${encodeURIComponent(HUSTLES[selectedHustle].name)}`;
+  const id=p.get('id')||'';
+  const hustle=HUSTLES[selectedHustle].name;
+
+  // Fire S4 — Niche Options
+  fetch('https://hook.eu1.make.com/om2x5cb1yowwl2nxj4za9cjelehztt5u',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id, hustle})
+  }).catch(e=>console.warn('S4 webhook error:',e));
+
+  window.location.href=`niche.html?id=${id}&hustle=${encodeURIComponent(hustle)}`;
 });
 
 // ══════════════════════════════════

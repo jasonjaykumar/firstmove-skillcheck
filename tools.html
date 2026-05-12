@@ -479,6 +479,13 @@ function showComplete(){
 }
 
 document.getElementById("btn-next").addEventListener("click",()=>{
+  // Fire S7 — Client Profile
+  fetch('https://hook.eu1.make.com/f4hf7pncm2vj8rx73ky5o9o52eql14sx',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:recordId, hustle, niche})
+  }).catch(e=>console.warn('S7 webhook error:',e));
+
   window.location.href=`client.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
 });
 

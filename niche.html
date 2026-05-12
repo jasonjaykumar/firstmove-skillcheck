@@ -617,8 +617,16 @@ document.getElementById('modal-back').addEventListener('click',()=>{
 
 document.getElementById('modal-confirm').addEventListener('click',()=>{
   if(selectedNiche===null) return;
-  const niche = encodeURIComponent(NICHES[selectedNiche].name);
+  const niche  = encodeURIComponent(NICHES[selectedNiche].name);
   const hustle = encodeURIComponent(hustleName);
+
+  // Fire S5 — Tool Suggestions
+  fetch('https://hook.eu1.make.com/c3xzqc6pfes1aqyigkdntp8m55i44217',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:recordId, hustle:hustleName, niche:NICHES[selectedNiche].name})
+  }).catch(e=>console.warn('S5 webhook error:',e));
+
   window.location.href=`tools.html?id=${recordId}&hustle=${hustle}&niche=${niche}&name=${encodeURIComponent(userName)}`;
 });
 

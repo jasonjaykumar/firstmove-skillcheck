@@ -171,8 +171,7 @@ opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0
 
   <div class="hero-eyebrow" id="eyebrow">What comes next</div>
   <h1 class="hero-title" id="title">BEFORE<br>WE BEGIN.</h1>
-  <p class="hero-sub" id="sub">Every second you wait is a second someone else moves. Standing still in a world of such rapid change is quite possibly the most dangerous move you can make. Championships are not won in the arena. They are won in the thousands of hours in the training room, the labs, the 5am runs when it is raining and everyone else is sleeping. That is when it is won. The heartbeat of a champion is a light switch that does not turn on and off when someone is watching. It is constant.</p>
-  <p class="hero-quote" id="quote">For once in your life take ownership. Have credibility behind your actions and your words. Mean what you say. Do what you say. Follow through on something one time. Just one time. You will feel a high you have never felt before. — Greg Plitt</p>
+  <p class="hero-quote" id="quote">"For once in your life take ownership. Have credibility behind your actions and your words. Mean what you say. Do what you say. Follow through on something one time. Just one time. You will feel a high you have never felt before." — Greg Plitt</p>
 
   <div class="cards" id="cards">
 
@@ -215,7 +214,7 @@ document.addEventListener('mousemove', e=>{cur.style.left=e.clientX+'px';cur.sty
 document.addEventListener('mouseover', e=>{cur.classList.toggle('big', !!e.target.closest('button,.intro-card'));});
 
 // ANIMATE IN
-const els = ['logo','eyebrow','title','sub','quote','time-note','cta-wrap'];
+const els = ['logo','eyebrow','title','quote','time-note','cta-wrap'];
 els.forEach((id, i)=>{
   setTimeout(()=>document.getElementById(id)?.classList.add('go'), 100 + i*80);
 });
