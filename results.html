@@ -367,6 +367,12 @@ function startCounter(){
 
 // BUTTONS
 function goToRecommendations(){
+  fetch('https://hook.eu1.make.com/4gj1jeoq38vm953wes1ryn84gtkfr3l4', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ id: recordId })
+  }).catch(e => console.warn('S2 webhook error:', e));
+
   window.location.href = `recommendations.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
 }
 function goToArsenal(){
@@ -404,15 +410,12 @@ if(scoreEl){
       taunting=true;
       const orig=SCORE;
       let cur=orig;
-      // Count UP fast — eager
       const upInterval=setInterval(()=>{
         cur++;
         scoreEl.textContent=cur;
         if(cur>=12){
           clearInterval(upInterval);
-          // Pause at 12 for a beat
           setTimeout(()=>{
-            // Count DOWN slowly, one by one — taunting
             const downInterval=setInterval(()=>{
               cur--;
               scoreEl.textContent=cur;
@@ -421,15 +424,14 @@ if(scoreEl){
                 scoreEl.textContent=orig;
                 taunting=false;
               }
-            }, 280); // slow — one number at a time, deliberate
-          }, 600); // pause at 12
+            }, 280);
+          }, 600);
         }
-      }, 55); // fast upward
+      }, 55);
     },3000);
   });
   scoreEl.addEventListener('mouseleave',()=>{
     clearTimeout(hoverTimer);
-    // don't interrupt mid-taunt
   });
 }
 
