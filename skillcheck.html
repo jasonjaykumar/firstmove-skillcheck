@@ -493,8 +493,6 @@ function initQuiz(){
   document.getElementById('q-counter').textContent = `Question 1 of ${QUESTIONS.length}`;
 }
 
-
-    correct: 1
 // ══════════════════════════════════════════
 // CURSOR
 // ══════════════════════════════════════════
@@ -702,14 +700,17 @@ function submitAnswers(){
   }, 100);
 
   // POST answers to S3 — Grading + Learning Path
+  // Send user's answer letter AND the correct answer letter for each question
+  // so S3 can grade by correctness not position
+  function idxToLetter(i){ return i === 0 ? 'A' : i === 1 ? 'B' : 'C'; }
   const payload = {
     id: recordId,
-    q1: answers[0] === 0 ? 'A' : answers[0] === 1 ? 'B' : 'C',
-    q2: answers[1] === 0 ? 'A' : answers[1] === 1 ? 'B' : 'C',
-    q3: answers[2] === 0 ? 'A' : answers[2] === 1 ? 'B' : 'C',
-    q4: answers[3] === 0 ? 'A' : answers[3] === 1 ? 'B' : 'C',
-    q5: answers[4] === 0 ? 'A' : answers[4] === 1 ? 'B' : 'C',
-    q6: answers[5] === 0 ? 'A' : answers[5] === 1 ? 'B' : 'C',
+    q1: idxToLetter(answers[0]), correct1: idxToLetter(QUESTIONS[0]?.correct ?? 0),
+    q2: idxToLetter(answers[1]), correct2: idxToLetter(QUESTIONS[1]?.correct ?? 0),
+    q3: idxToLetter(answers[2]), correct3: idxToLetter(QUESTIONS[2]?.correct ?? 0),
+    q4: idxToLetter(answers[3]), correct4: idxToLetter(QUESTIONS[3]?.correct ?? 0),
+    q5: idxToLetter(answers[4]), correct5: idxToLetter(QUESTIONS[4]?.correct ?? 0),
+    q6: idxToLetter(answers[5]), correct6: idxToLetter(QUESTIONS[5]?.correct ?? 0),
     skillArea: SKILL_AREA
   };
 
