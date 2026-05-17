@@ -222,6 +222,7 @@ const NAME     = params.get('name') || 'You';
 // AIRTABLE FETCH
 const WORKER  = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 let pollCount = 0;
+let FIELDS = {}; // ← STORES ALL AIRTABLE FIELDS FOR WEBHOOK
 
 function cleanR(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').trim(); }
 
@@ -245,6 +246,7 @@ function pollResults(){
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
+      FIELDS = fields; // ← STORE ALL FIELDS
       const raw    = fields['Grade'] || fields['grade'] || '';
       const name   = fields['Name'] || fields['name'] || NAME;
       if(raw && raw.trim().length > 20){
@@ -367,10 +369,26 @@ function startCounter(){
 
 // BUTTONS
 function goToRecommendations(){
+  // Send all user fields to S2 webhook so Claude has full context
   fetch('https://hook.eu1.make.com/qhsimsnv26dbxydsjkbpihnnuflh2lya', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ id: recordId })
+    body: JSON.stringify({
+      recordId:         recordId,
+      name:             FIELDS['Name'] || '',
+      age:              FIELDS['Age'] || '',
+      city:             FIELDS['City'] || '',
+      skillArea:        FIELDS['Skills Multi'] || '',
+      enjoysDoing:      FIELDS['Enjoys doing'] || '',
+      timeAvailable:    FIELDS['Time Available'] || '',
+      earningGoal:      FIELDS['Earning goal'] || '',
+      moneyMotivation:  FIELDS['Money Motivation'] || '',
+      timeline:         FIELDS['Timeline'] || '',
+      moneyToStart:     FIELDS['Money to start'] || '',
+      deviceAccess:     FIELDS['Device access multi'] || '',
+      socialMedia:      FIELDS['Social Media'] || '',
+      previousAttempts: FIELDS['Previous Attempts '] || ''
+    })
   }).catch(e => console.warn('S2 webhook error:', e));
 
   window.location.href = `recommendations.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
