@@ -312,6 +312,7 @@ document.getElementById('nav-hustle').textContent = hustleName;
 const WORKER = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 let NICHES = [];
 let nichePolls = 0;
+let AIRTABLE_FIELDS = {}; // stores all fields for webhook
 
 function cleanStr(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
@@ -403,6 +404,7 @@ function pollNiches(){
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
+      AIRTABLE_FIELDS = fields; // store for webhook
       const raw = fields['Niche Options'] || fields['niche_options'] || '';
       if(raw && raw.trim().length > 100){
         const parsed = parseNiches(raw);
@@ -624,7 +626,19 @@ document.getElementById('modal-confirm').addEventListener('click',()=>{
   fetch('https://hook.eu1.make.com/c3xzqc6pfes1aqyigkdntp8m55i44217',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id:recordId, hustle:hustleName, niche:NICHES[selectedNiche].name})
+    body:JSON.stringify({
+      recordId,
+      hustle: hustleName,
+      niche: NICHES[selectedNiche].name,
+      name:            AIRTABLE_FIELDS['Name'] || '',
+      age:             AIRTABLE_FIELDS['Age'] || '',
+      city:            AIRTABLE_FIELDS['City'] || '',
+      skillArea:       AIRTABLE_FIELDS['Skills Multi'] || '',
+      enjoysDoing:     AIRTABLE_FIELDS['Enjoys doing'] || '',
+      timeAvailable:   AIRTABLE_FIELDS['Time Available'] || '',
+      earningGoal:     AIRTABLE_FIELDS['Earning goal'] || '',
+      deviceAccess:    AIRTABLE_FIELDS['Device access multi'] || ''
+    })
   }).catch(e=>console.warn('S5 webhook error:',e));
 
   window.location.href=`tools.html?id=${recordId}&hustle=${hustle}&niche=${niche}&name=${encodeURIComponent(userName)}`;

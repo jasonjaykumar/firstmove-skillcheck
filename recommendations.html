@@ -485,6 +485,7 @@ function pollHustles(){
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
+      window.AIRTABLE_FIELDS = fields; // store for S4 webhook
       const raw = fields['Hustle recommendations '] || fields['Hustle recommendations'] || fields['Hustle Recommendations'] || '';
       if(raw && raw.trim().length > 100){
         const parsed = parseHustles(raw);
@@ -932,10 +933,22 @@ document.getElementById('modal-confirm').addEventListener('click',()=>{
   const hustle=HUSTLES[selectedHustle].name;
 
   // Fire S4 — Niche Options
+  const af = window.AIRTABLE_FIELDS || {};
   fetch('https://hook.eu1.make.com/om2x5cb1yowwl2nxj4za9cjelehztt5u',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id, hustle})
+    body:JSON.stringify({
+      recordId: id,
+      hustle,
+      name:          af['Name'] || '',
+      age:           af['Age'] || '',
+      city:          af['City'] || '',
+      skillArea:     af['Skills Multi'] || '',
+      enjoysDoing:   af['Enjoys doing'] || '',
+      timeAvailable: af['Time Available'] || '',
+      earningGoal:   af['Earning goal'] || '',
+      deviceAccess:  af['Device access multi'] || ''
+    })
   }).catch(e=>console.warn('S4 webhook error:',e));
 
   window.location.href=`niche.html?id=${id}&hustle=${encodeURIComponent(hustle)}`;
