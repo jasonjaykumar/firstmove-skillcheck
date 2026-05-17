@@ -485,7 +485,7 @@ function pollHustles(){
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
-      const raw = fields['Hustle recommendations'] || fields['Hustle Recommendations'] || '';
+      const raw = fields['Hustle recommendations '] || fields['Hustle recommendations'] || fields['Hustle Recommendations'] || '';
       if(raw && raw.trim().length > 100){
         const parsed = parseHustles(raw);
         if(parsed.length >= 2){
