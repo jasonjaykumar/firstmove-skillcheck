@@ -450,7 +450,7 @@ function parseSpeech(raw, tagType){
 function parseClientProfile(raw){
   const text = cleanC(raw);
   const get = (key) => {
-    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|$)');
+    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)');
     const m = text.match(re);
     return m ? cleanC(m[1]) : '';
   };
