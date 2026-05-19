@@ -450,7 +450,7 @@ function parseSpeech(raw, tagType){
 function parseClientProfile(raw){
   const text = cleanC(raw);
   const get = (key) => {
-    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)');
+    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)', 'm');
     const m = text.match(re);
     return m ? cleanC(m[1]) : '';
   };
@@ -495,6 +495,10 @@ function pollClient(){
       const raw = fields['Client Profile'] || fields['client_profile'] || '';
       if(raw && raw.trim().length > 100){
         CLIENT_DATA = parseClientProfile(raw);
+        // Update hints to show data is ready
+        document.getElementById('hint-ideal')?.classList.remove('hidden');
+        document.getElementById('hint-walkaway')?.classList.remove('hidden');
+        document.querySelectorAll('.click-hint').forEach(h=>{ if(h.textContent==='Loading...') h.textContent='Tap me'; });
         // Trigger the profile buttons now that data is ready
         initClientPage();
       } else {
@@ -574,6 +578,11 @@ function initClientPage(){
   if(iconWalkaway) iconWalkaway.style.opacity = '1';
 }
 
+// Show loading state on profile icons while waiting
+if(recordId){
+  document.getElementById('hint-ideal').textContent = 'Loading...';
+  document.getElementById('hint-walkaway').textContent = 'Loading...';
+}
 // Start poll
 pollClient();
 
@@ -653,7 +662,16 @@ function hideHints(){
 }
 
 function activateProfile(type){
-  if(!CLIENT_DATA){ return; } // wait for data
+  if(!CLIENT_DATA){
+    // Show loading hint
+    const hint = document.getElementById('hint-'+type);
+    if(hint){ hint.textContent = 'Loading...'; hint.classList.remove('hidden'); }
+    // Retry once data arrives
+    const waitInterval = setInterval(()=>{
+      if(CLIENT_DATA){ clearInterval(waitInterval); activateProfile(type); }
+    }, 500);
+    return;
+  }
   hideHints();
   if(currentType===type) return;
   currentType=type;

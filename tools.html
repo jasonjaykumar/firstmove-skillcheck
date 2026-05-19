@@ -294,6 +294,7 @@ function pollTools(){
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
+      window.TOOL_FIELDS = fields; // store for S6 webhook
       const raw = fields['Tool Suggestions'] || fields['tool_suggestions'] || '';
       if(raw && raw.trim().length > 100){
         const parsed = parseTools(raw);
@@ -479,12 +480,23 @@ function showComplete(){
 }
 
 document.getElementById("btn-next").addEventListener("click",()=>{
-  // Fire S7 — Client Profile
-  fetch('https://hook.eu1.make.com/f4hf7pncm2vj8rx73ky5o9o52eql14sx',{
+  // Fire S6 — Client Profile
+  const tf = window.TOOL_FIELDS || {};
+  fetch('https://hook.eu1.make.com/lklqfxafl2paoc6sua17gdo8rtol5f75',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id:recordId, hustle, niche})
-  }).catch(e=>console.warn('S7 webhook error:',e));
+    body:JSON.stringify({
+      recordId,
+      hustle,
+      niche,
+      name:        tf['Name'] || '',
+      age:         tf['Age'] || '',
+      city:        tf['City'] || '',
+      skillArea:   tf['Skills Multi'] || '',
+      enjoysDoing: tf['Enjoys doing'] || '',
+      languages:   tf['Languages'] || 'English'
+    })
+  }).catch(e=>console.warn('S6 webhook error:',e));
 
   window.location.href=`client.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
 });
