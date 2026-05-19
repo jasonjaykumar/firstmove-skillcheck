@@ -272,7 +272,7 @@ function parseTools(raw){
   const blocks = raw.split(/\n?---\n?/).filter(b=>b.trim().length>20);
   return blocks.slice(0,4).map(block=>{
     const get = (key) => {
-      const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|$)');
+      const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)');
       const m = block.match(re);
       return m ? cleanT(m[1]) : '';
     };
