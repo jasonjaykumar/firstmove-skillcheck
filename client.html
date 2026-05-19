@@ -865,13 +865,34 @@ setTimeout(()=>{
 setTimeout(()=>document.getElementById("cta-section")?.classList.add("go"),1200);
 
 // NEXT
-document.getElementById("btn-next").addEventListener("click",()=>{
-  // Fire S6 — Motivational Speech + Mission Plan
-  fetch('https://hook.eu1.make.com/19xogi72ha1fv2prg6opabcuj71xydsq',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id:recordId, hustle, niche})
-  }).catch(e=>console.warn('S6 webhook error:',e));
+document.getElementById("btn-next").addEventListener("click",async()=>{
+  // Fetch full user record from Airtable then fire S7 — Client Profile
+  try {
+    const r = await fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}`);
+    const d = await r.json();
+    const f = d.fields || {};
+    fetch('https://hook.eu1.make.com/f4hf7pncm2vj8rx73ky5o9o52eql14sx',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id: recordId,
+        name: f['Name'] || f['name'] || userName,
+        age: f['Age'] || f['age'] || '',
+        city: f['City'] || f['city'] || '',
+        skillArea: f['Skill Area'] || f['skillArea'] || '',
+        hustle: hustle,
+        niche: niche,
+        languages: f['Languages'] || f['languages'] || 'English'
+      })
+    }).catch(e=>console.warn('S7 webhook error:',e));
+  } catch(e) {
+    // fallback — fire with what we have
+    fetch('https://hook.eu1.make.com/f4hf7pncm2vj8rx73ky5o9o52eql14sx',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:recordId, hustle, niche, name:userName})
+    }).catch(e=>console.warn('S7 webhook error:',e));
+  }
 
   window.location.href=`mission.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
 });
