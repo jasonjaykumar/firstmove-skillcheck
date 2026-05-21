@@ -258,8 +258,41 @@ opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 </style>
+
+<!-- THEME SYSTEM -->
+<script>
+(function(){
+  var t=localStorage.getItem('fm_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+})();
+function fmToggleTheme(){
+  var c=document.documentElement.getAttribute('data-theme')||'light';
+  var n=c==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('fm_theme',n);
+  var ic=document.getElementById('fm-theme-icon');
+  var lb=document.getElementById('fm-theme-label');
+  if(ic)ic.textContent=n==='dark'?'🌙':'☀️';
+  if(lb)lb.textContent=n==='dark'?'Dark':'Light';
+}
+window.addEventListener('DOMContentLoaded',function(){
+  var t=localStorage.getItem('fm_theme')||'light';
+  var ic=document.getElementById('fm-theme-icon');
+  var lb=document.getElementById('fm-theme-label');
+  if(ic)ic.textContent=t==='dark'?'🌙':'☀️';
+  if(lb)lb.textContent=t==='dark'?'Dark':'Light';
+});
+</script>
 </head>
-<body>
+<body><button onclick="fmToggleTheme()" id="fm-toggle-btn" style="
+  position:fixed;top:14px;right:16px;z-index:9999;
+  display:flex;align-items:center;gap:5px;
+  background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.2);
+  border-radius:20px;padding:5px 12px;cursor:pointer;
+  font-size:11px;font-family:'Space Grotesk',sans-serif;font-weight:500;
+  color:inherit;letter-spacing:0.05em;
+  transition:background 0.2s;
+"><span id="fm-theme-icon">☀️</span><span id="fm-theme-label">Light</span></button>
 <div id="cursor"></div>
 <canvas id="cursor-light" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
 
@@ -503,7 +536,11 @@ function pollHustles(){
 
 function retry(){
   pollAttempts++;
-  if(pollAttempts < 40) setTimeout(pollHustles, 3000);
+  if(pollAttempts === 10){
+    var el=document.getElementById('fm-loading-msg');
+    if(el)el.textContent='Still generating your personalised results... hang tight.';
+  }
+  if(pollAttempts < 60) setTimeout(pollHustles, 3000);
   else loadFallback();
 }
 
@@ -589,7 +626,7 @@ const dotsEl = document.getElementById('arrow-dots');
 });
 
 // Kick off Airtable poll — buildScreens() called when data arrives
-setTimeout(pollHustles, 5000);
+pollHustles();
 
 // ══════════════════════════════════
 // TV STATIC TRANSITION

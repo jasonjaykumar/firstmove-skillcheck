@@ -193,8 +193,41 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
 .btn-primary{width:100%;background:var(--cream);color:var(--black);border:none;padding:18px 32px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;transition:transform .25s,box-shadow .25s;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,230,224,.15);}
 </style>
+
+<!-- THEME SYSTEM -->
+<script>
+(function(){
+  var t=localStorage.getItem('fm_theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+})();
+function fmToggleTheme(){
+  var c=document.documentElement.getAttribute('data-theme')||'light';
+  var n=c==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('fm_theme',n);
+  var ic=document.getElementById('fm-theme-icon');
+  var lb=document.getElementById('fm-theme-label');
+  if(ic)ic.textContent=n==='dark'?'🌙':'☀️';
+  if(lb)lb.textContent=n==='dark'?'Dark':'Light';
+}
+window.addEventListener('DOMContentLoaded',function(){
+  var t=localStorage.getItem('fm_theme')||'light';
+  var ic=document.getElementById('fm-theme-icon');
+  var lb=document.getElementById('fm-theme-label');
+  if(ic)ic.textContent=t==='dark'?'🌙':'☀️';
+  if(lb)lb.textContent=t==='dark'?'Dark':'Light';
+});
+</script>
 </head>
-<body>
+<body><button onclick="fmToggleTheme()" id="fm-toggle-btn" style="
+  position:fixed;top:14px;right:16px;z-index:9999;
+  display:flex;align-items:center;gap:5px;
+  background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.2);
+  border-radius:20px;padding:5px 12px;cursor:pointer;
+  font-size:11px;font-family:'Space Grotesk',sans-serif;font-weight:500;
+  color:inherit;letter-spacing:0.05em;
+  transition:background 0.2s;
+"><span id="fm-theme-icon">☀️</span><span id="fm-theme-label">Light</span></button>
 <div id="cursor"></div>
 
 <div id="top-nav">
@@ -309,7 +342,11 @@ function pollTools(){
 
 function retryTools(){
   toolPolls++;
-  if(toolPolls < 40) setTimeout(pollTools, 3000);
+  if(toolPolls === 10){
+    var el=document.getElementById('fm-loading-msg');
+    if(el)el.textContent='Still generating your personalised results... hang tight.';
+  }
+  if(toolPolls < 60) setTimeout(pollTools, 3000);
   else loadFallbackTools();
 }
 
@@ -357,7 +394,7 @@ function buildToolStubs(){
 }
 
 // Start poll — buildToolStubs() called when data arrives
-setTimeout(pollTools, 5000);
+pollTools();
 
 // STUB CLICK — pull out tool
 document.getElementById("toolkit-stubs").addEventListener("click",e=>{
