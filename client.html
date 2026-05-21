@@ -493,7 +493,7 @@ function pollClient(){
     .then(data=>{
       const fields = data.fields || data;
       const raw = fields['Client Profile'] || fields['client_profile'] || '';
-      if(raw && raw.trim().length > 100){
+      if(raw && raw.trim().length > 30){
         CLIENT_DATA = parseClientProfile(raw);
         // Update hints to show data is ready
         document.getElementById('hint-ideal')?.classList.remove('hidden');
@@ -510,7 +510,7 @@ function pollClient(){
 
 function retryClient(){
   clientPolls++;
-  if(clientPolls < 15) setTimeout(pollClient, 3000);
+  if(clientPolls < 40) setTimeout(pollClient, 3000);
   else loadFallbackClient();
 }
 
@@ -584,7 +584,7 @@ if(recordId){
   document.getElementById('hint-walkaway').textContent = 'Loading...';
 }
 // Start poll
-pollClient();
+setTimeout(pollClient, 5000);
 
 const WHERE_DATA=[
   {title:"Instagram Search",text:"Search your city plus your niche — 'Bengaluru gym' or 'Bengaluru fitness studio'. Filter accounts with 200 to 2000 followers. Look for inconsistent posting and weak captions. These are your warmest prospects."},

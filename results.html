@@ -254,13 +254,13 @@ function pollResults(){
         applyData(status, score, breakdown, name);
       } else {
         pollCount++;
-        if(pollCount < 15) setTimeout(pollResults, 3000);
+        if(pollCount < 40) setTimeout(pollResults, 3000);
         else applyData('ALMOST', 7, '', NAME);
       }
     })
     .catch(()=>{
       pollCount++;
-      if(pollCount < 15) setTimeout(pollResults, 3000);
+      if(pollCount < 40) setTimeout(pollResults, 3000);
       else applyData('ALMOST', 7, '', NAME);
     });
 }
@@ -400,7 +400,7 @@ document.getElementById('btn-continue')?.addEventListener('click', goToRecommend
 document.getElementById('btn-arsenal')?.addEventListener('click', goToArsenal);
 
 // START
-pollResults();
+setTimeout(pollResults, 5000);
 
 // ── BREATHING BACKGROUND
 (function(){

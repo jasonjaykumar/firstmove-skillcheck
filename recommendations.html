@@ -486,7 +486,7 @@ function pollHustles(){
     .then(data=>{
       const fields = data.fields || data;
       window.AIRTABLE_FIELDS = fields; // store for S4 webhook
-      const raw = fields['Hustle recommendations '] || fields['Hustle recommendations'] || fields['Hustle Recommendations'] || '';
+      const raw = fields['Hustle Recommendations'] || fields['Hustle recommendations'] || fields['Hustle recommendations '] || '';
       if(raw && raw.trim().length > 100){
         const parsed = parseHustles(raw);
         if(parsed.length >= 2){
@@ -503,7 +503,7 @@ function pollHustles(){
 
 function retry(){
   pollAttempts++;
-  if(pollAttempts < 15) setTimeout(pollHustles, 3000);
+  if(pollAttempts < 40) setTimeout(pollHustles, 3000);
   else loadFallback();
 }
 
@@ -589,7 +589,7 @@ const dotsEl = document.getElementById('arrow-dots');
 });
 
 // Kick off Airtable poll — buildScreens() called when data arrives
-pollHustles();
+setTimeout(pollHustles, 5000);
 
 // ══════════════════════════════════
 // TV STATIC TRANSITION

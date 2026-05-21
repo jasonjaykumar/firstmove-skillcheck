@@ -296,7 +296,7 @@ function pollTools(){
       const fields = data.fields || data;
       window.TOOL_FIELDS = fields; // store for S6 webhook
       const raw = fields['Tool Suggestions'] || fields['tool_suggestions'] || '';
-      if(raw && raw.trim().length > 100){
+      if(raw && raw.trim().length > 30){
         const parsed = parseTools(raw);
         if(parsed.length >= 2){
           TOOLS = parsed;
@@ -309,7 +309,7 @@ function pollTools(){
 
 function retryTools(){
   toolPolls++;
-  if(toolPolls < 15) setTimeout(pollTools, 3000);
+  if(toolPolls < 40) setTimeout(pollTools, 3000);
   else loadFallbackTools();
 }
 
@@ -357,7 +357,7 @@ function buildToolStubs(){
 }
 
 // Start poll — buildToolStubs() called when data arrives
-pollTools();
+setTimeout(pollTools, 5000);
 
 // STUB CLICK — pull out tool
 document.getElementById("toolkit-stubs").addEventListener("click",e=>{
