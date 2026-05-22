@@ -400,6 +400,7 @@ document.getElementById('nav-hustle').textContent = hustleName;
 // ── AIRTABLE FETCH + PARSER
 const WORKER = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 let NICHES = [];
+let nichesRendered = false;
 let nichePolls = 0;
 let AIRTABLE_FIELDS = {}; // stores all fields for webhook
 
@@ -430,6 +431,8 @@ function parseNiches(raw){
 }
 
 function buildNicheCards(){
+  if(nichesRendered) return;
+  nichesRendered = true;
   const list = document.getElementById('niche-list');
   list.innerHTML = '';
   NICHES.forEach((n,i)=>{
@@ -499,6 +502,7 @@ function pollNiches(){
         const parsed = parseNiches(raw);
         if(parsed.length >= 2){
           NICHES = parsed;
+          fmHideLoading();
           buildNicheCards();
         } else {
           retryNiches();
@@ -519,6 +523,7 @@ function retryNiches(){
 }
 
 function buildFallbackNiches(){
+  fmHideLoading();
   NICHES = [
     {name:"Local Business Social Media",tags:["Local","High Demand","Recurring"],demand:"Very High",competition:"Low",avgBudget:"₹5,000 – ₹12,000/month",whyFits:"Your skills match exactly what local businesses need — someone who understands their market and can show up consistently.",whyIndia:"India has millions of small businesses with no social media presence. The demand is real and growing every year.",whyNow:"Post-pandemic, every business knows they need to be online. Most still have nobody running it.",summary:"Local businesses in your city who know they need social media but have no one doing it."},
     {name:"Content Creator Support",tags:["Growing","Creative","Remote"],demand:"High",competition:"Medium",avgBudget:"₹4,000 – ₹10,000/month",whyFits:"Creators need support with editing, thumbnails, and scheduling — skills that match your profile.",whyIndia:"India has over 500 million social media users and a booming creator economy.",whyNow:"Short-form content demand is exploding and creators are desperate for reliable support.",summary:"Content creators who need consistent help with production so they can focus on creating."},
@@ -528,7 +533,6 @@ function buildFallbackNiches(){
   buildNicheCards();
 }
 
-// ── STATE
 // ── STATE
 let revealed = [false,false,false,false];
 let selectedNiche = null;
@@ -545,7 +549,7 @@ function positionDots(){
 window.addEventListener('resize', positionDots);
 
 // ── START POLL
-pollNiches();
+setTimeout(pollNiches, 2000);
 
 // Update timeline fill height
 function updateTimeline(){

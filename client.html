@@ -297,96 +297,7 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
 .cta-sub{font-size:13px;color:rgba(232,230,224,.45);font-weight:300;line-height:1.65;margin-bottom:24px;}
 .btn-primary{background:var(--cream);color:var(--black);border:none;padding:16px 40px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;transition:transform .25s,box-shadow .25s;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,230,224,.15);}
-
-/* ─── LOADING SCREEN ─────────────────────────────────────────────────────────── */
-.fm-loading{
-  position:fixed;inset:0;z-index:500;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:var(--bg, #E8E6E0);gap:28px;
-  transition:opacity 0.6s ease, visibility 0.6s ease;
-}
-.fm-loading.hidden{opacity:0;visibility:hidden;pointer-events:none;}
-.fm-loading-wordmark{
-  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.2em;
-  color:rgba(10,10,10,0.3);margin-bottom:8px;
-}
-[data-theme="dark"] .fm-loading-wordmark{color:rgba(232,230,224,0.3);}
-.fm-loading-msg{
-  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:300;
-  color:rgba(10,10,10,0.6);text-align:center;max-width:340px;line-height:1.6;
-  min-height:48px;transition:opacity 0.4s;
-}
-[data-theme="dark"] .fm-loading-msg{color:rgba(232,230,224,0.6);}
-.fm-loading-bar{
-  width:200px;height:1px;background:rgba(10,10,10,0.12);border-radius:1px;overflow:hidden;
-}
-[data-theme="dark"] .fm-loading-bar{background:rgba(232,230,224,0.12);}
-.fm-loading-fill{
-  height:100%;background:#0A0A0A;border-radius:1px;
-  animation:fmBarSlide 1.8s ease-in-out infinite;
-}
-[data-theme="dark"] .fm-loading-fill{background:#E8E6E0;}
-@keyframes fmBarSlide{
-  0%{width:0%;margin-left:0}
-  50%{width:55%;margin-left:22%}
-  100%{width:0%;margin-left:100%}
-}
-.fm-loading-retry{
-  display:none;font-family:'Space Grotesk',sans-serif;font-size:12px;
-  font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
-  color:#0A0A0A;background:transparent;border:1px solid rgba(10,10,10,0.3);
-  border-radius:4px;padding:10px 24px;cursor:pointer;margin-top:8px;
-}
-[data-theme="dark"] .fm-loading-retry{color:#E8E6E0;border-color:rgba(232,230,224,0.3);}
-.fm-loading-retry:hover{opacity:0.7;}
-
 </style>
-
-
-<script>
-// ─── LOADING SCREEN MANAGER ───────────────────────────────────────────────────
-var fmLoadingMsgs = [
-  [0,   'Building your results...'],
-  [15,  'Claude is being thorough — almost there...'],
-  [35,  'Taking a little longer than usual — still on it...'],
-  [60,  'Nearly done — this one needed extra thought...'],
-  [100, 'Still going — hang tight just a moment more...'],
-];
-var fmLoadingTimer = 0;
-var fmLoadingInterval = null;
-
-function fmStartLoading(){
-  fmLoadingTimer = 0;
-  fmLoadingInterval = setInterval(function(){
-    fmLoadingTimer++;
-    var msg = document.getElementById('fm-loading-msg');
-    if(!msg) return;
-    for(var i = fmLoadingMsgs.length-1; i >= 0; i--){
-      if(fmLoadingTimer >= fmLoadingMsgs[i][0]){
-        msg.textContent = fmLoadingMsgs[i][1];
-        break;
-      }
-    }
-    // After 3 minutes show retry
-    if(fmLoadingTimer >= 180){
-      clearInterval(fmLoadingInterval);
-      var retry = document.getElementById('fm-loading-retry');
-      var msgEl = document.getElementById('fm-loading-msg');
-      if(retry) retry.style.display='block';
-      if(msgEl) msgEl.textContent = 'Something took too long. Your data may still be generating.';
-    }
-  }, 1000);
-}
-
-function fmHideLoading(){
-  clearInterval(fmLoadingInterval);
-  var el = document.getElementById('fm-loading');
-  if(el) el.classList.add('hidden');
-}
-
-// Start loading timer on page load
-fmStartLoading();
-</script>
 </head>
 <body>
 <div id="cursor"></div>
@@ -511,7 +422,8 @@ let CLIENT_DATA = null;
 function cleanC(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseSpeech(raw, tagType){
-  // Split on [GREEN]...[/GREEN] or [RED]...[/RED] tags
+  // Normalise tags first - handle ][/GREEN] edge case from Claude
+  raw = (raw||'').replace(/\]\[\/(GREEN|RED)\]/g, '[/$1]');
   const openTag  = tagType==='green' ? '[GREEN]' : '[RED]';
   const closeTag = tagType==='green' ? '[/GREEN]' : '[/RED]';
   const segments = [];
@@ -539,7 +451,8 @@ function parseSpeech(raw, tagType){
 function parseClientProfile(raw){
   const text = cleanC(raw);
   const get = (key) => {
-    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)', 'm');
+    // Match key: content, stopping at next ALL-CAPS key or end
+    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n\\n?[A-Z][A-Z_]+:|$)', 'm');
     const m = text.match(re);
     return m ? cleanC(m[1]) : '';
   };
@@ -576,8 +489,7 @@ function parseClientProfile(raw){
 }
 
 function pollClient(){
-  if(!recordId){ fmHideLoading();
-        loadFallbackClient(); return; }
+  if(!recordId){ loadFallbackClient(); return; }
   fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}`)
     .then(r=>r.json())
     .then(data=>{
@@ -600,16 +512,65 @@ function pollClient(){
 
 function retryClient(){
   clientPolls++;
-  if(clientPolls === 10){
-    var el=document.getElementById('fm-loading-msg');
-    if(el)el.textContent='Still generating your personalised results... hang tight.';
-  }
-  if(clientPolls < 60) setTimeout(pollClient, 3000);
-  else fmHideLoading();
-        loadFallbackClient();
+  if(clientPolls < 40) setTimeout(pollClient, 3000);
+  else loadFallbackClient();
 }
 
-
+function loadFallbackClient(){
+  CLIENT_DATA = {
+    ideal:{
+      name:"Raj, Gym Owner",
+      speech:[
+        {text:"Hey. I run ", type:"normal"},
+        {text:"FitZone — 3 years open, 200 members, solid reputation", type:"green"},
+        {text:" in Koramangala. My Instagram has not been touched in 6 weeks. I need someone who ", type:"normal"},
+        {text:"takes full ownership", type:"green"},
+        {text:" and ", type:"normal"},
+        {text:"shows me results in 60 days", type:"green"},
+        {text:". I have already set aside ", type:"normal"},
+        {text:"a proper budget", type:"green"},
+        {text:" — not looking for cheap. Looking for good.", type:"normal"}
+      ],
+      details:[
+        {type:"green", label:"Green Flags", items:[
+          "Admits the problem unprompted — they have already done the hard part",
+          "Can name a specific loss caused by bad marketing",
+          "Too busy running the business to micromanage you",
+          "Competitors are visibly winning online — the pressure is already there",
+          "Paying customers exist and money is already moving",
+          "Asks for ownership and results, not a list of deliverables"
+        ]},
+        {type:"green", label:"What This Client Is Worth", text:"A gym owner with 200 members is pulling ₹4L–₹8L/month in revenue. Spending ₹8,000–₹15,000 on someone who grows that is obvious math to them. Show one new enquiry that came from Instagram and your retainer is secure for months."}
+      ]
+    },
+    walkaway:{
+      name:"Vikram, Serial Complainer",
+      speech:[
+        {text:"I need ", type:"normal"},
+        {text:"guaranteed results. 10,000 followers, minimum", type:"red"},
+        {text:". I will need to ", type:"normal"},
+        {text:"approve everything before it goes live", type:"red"},
+        {text:". My last two managers ", type:"normal"},
+        {text:"just did not get my vision", type:"red"},
+        {text:". Can you start ", type:"normal"},
+        {text:"for free for the first month", type:"red"},
+        {text:"?", type:"normal"}
+      ],
+      details:[
+        {type:"red", label:"Red Flags", items:[
+          "Demands follower guarantees — no honest professional can promise this",
+          "Wants approval on every single post — this is unpaid employment",
+          "Has already fired multiple managers and blames all of them",
+          "Adds scope before you have even agreed on price",
+          "Asks for a free first month — he has done this before",
+          "Frames everything as a test you have to pass"
+        ]},
+        {type:"red", label:"What This Client Actually Costs You", text:"It is not just the money. A client like this takes 3x the hours, sends messages at 11pm, and leaves a bad review when you walk away. At this stage one bad client can make you quit entirely. Walk away before the first invoice."}
+      ]
+    }
+  };
+  initClientPage();
+}
 
 function initClientPage(){
   // Re-enable the profile icon buttons now that CLIENT_DATA is ready
@@ -625,7 +586,7 @@ if(recordId){
   document.getElementById('hint-walkaway').textContent = 'Loading...';
 }
 // Start poll
-pollClient();
+setTimeout(pollClient, 5000);
 
 const WHERE_DATA=[
   {title:"Instagram Search",text:"Search your city plus your niche — 'Bengaluru gym' or 'Bengaluru fitness studio'. Filter accounts with 200 to 2000 followers. Look for inconsistent posting and weak captions. These are your warmest prospects."},

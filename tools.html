@@ -353,6 +353,7 @@ document.getElementById("toolkit-label").textContent=hustle.split(" ").slice(0,2
 // ── AIRTABLE FETCH + PARSER
 const WORKER = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 let TOOLS = [];
+let toolsBuilt = false;
 let toolPolls = 0;
 
 function cleanT(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
@@ -391,6 +392,7 @@ function pollTools(){
         if(parsed.length >= 2){
           TOOLS = parsed;
           buildToolStubs();
+          setTimeout(()=>pullOut(0), 150);
         } else { retryTools(); }
       } else { retryTools(); }
     })
@@ -405,7 +407,6 @@ function retryTools(){
   }
   if(toolPolls < 60) setTimeout(pollTools, 3000);
   else fmHideLoading();
-        loadFallbackTools();
 }
 
 
@@ -414,6 +415,7 @@ let confirmed=[false,false,false,false];
 let currentTool=null;
 
 function buildToolStubs(){
+  toolsBuilt = true;
   // BUILD DOTS
   const dotsEl=document.getElementById("toolkit-dots");
   dotsEl.innerHTML='';

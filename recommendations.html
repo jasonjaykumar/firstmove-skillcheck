@@ -461,6 +461,7 @@ const urlP   = new URLSearchParams(window.location.search);
 const recId  = urlP.get('id') || '';
 
 let HUSTLES = [];
+let hustlesRendered = false;
 let dataLoaded = false;
 let pollAttempts = 0;
 
@@ -502,6 +503,8 @@ function parseHustles(raw){
 }
 
 function buildScreens(){
+  if(hustlesRendered) return;
+  hustlesRendered = true;
   // Build hustle screens now that data is ready
   [0,1,2,3].forEach(i => {
     const h = HUSTLES[i];
@@ -570,7 +573,7 @@ function buildScreens(){
 
 function pollHustles(){
   if(!recId){ fmHideLoading();
-        loadFallback(); return; }
+        buildScreens(); return; }
   fetch(`${WORKER}?id=${encodeURIComponent(recId)}`)
     .then(r=>r.json())
     .then(data=>{
@@ -599,7 +602,6 @@ function retry(){
   }
   if(pollAttempts < 60) setTimeout(pollHustles, 3000);
   else fmHideLoading();
-        loadFallback();
 }
 
 
@@ -623,7 +625,7 @@ const dotsEl = document.getElementById('arrow-dots');
 });
 
 // Kick off Airtable poll — buildScreens() called when data arrives
-pollHustles();
+setTimeout(pollHustles, 2000);
 
 // ══════════════════════════════════
 // TV STATIC TRANSITION
