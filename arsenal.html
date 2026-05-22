@@ -374,22 +374,22 @@ let arsenalPolls = 0;
 let DYNAMIC_RESOURCES = null;
 
 function parseLearningPath(gradeRaw){
-  // Extract LEARNING_PATH section from Grade field
-  const lpMatch = gradeRaw.match(/LEARNING_PATH:([\s\S]*?)(?=
-[A-Z_]+:|\Z)/);
-  if(!lpMatch) return null;
-  const lp = lpMatch[1].trim();
-  const lines = lp.split('\n').map(l=>l.trim()).filter(l=>l.length>5);
-  const tasks = [];
-  lines.forEach(line=>{
-    const m = line.match(/^(Day [^:]+):\s*(.+)/);
-    if(m){
+  var idx = gradeRaw.indexOf('LEARNING_PATH:');
+  if(idx === -1) return null;
+  var lp = gradeRaw.slice(idx + 14).trim();
+  var lines = lp.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length > 5;});
+  var tasks = [];
+  lines.forEach(function(line){
+    var colonIdx = line.indexOf(':');
+    if(colonIdx > 0 && line.slice(0,colonIdx).indexOf('Day') !== -1){
+      var day = line.slice(0, colonIdx).trim();
+      var text = line.slice(colonIdx+1).trim();
       tasks.push({
-        day: m[1].trim(),
-        title: m[2].slice(0,50),
-        text: m[2],
-        doneLabel: 'Done — I completed this',
-        unlockQuote: '"Show up. Do the work. Results follow."'
+        day: day,
+        title: text.slice(0,50),
+        text: text,
+        doneLabel: 'Done - I completed this',
+        unlockQuote: 'Show up. Do the work. Results follow.'
       });
     }
   });

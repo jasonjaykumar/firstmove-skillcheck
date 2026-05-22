@@ -367,40 +367,9 @@ body::before{
 }
 </style>
 
-<!-- THEME SYSTEM -->
-<script>
-(function(){
-  var t=localStorage.getItem('fm_theme')||'light';
-  document.documentElement.setAttribute('data-theme',t);
-})();
-function fmToggleTheme(){
-  var c=document.documentElement.getAttribute('data-theme')||'light';
-  var n=c==='light'?'dark':'light';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('fm_theme',n);
-  var ic=document.getElementById('fm-theme-icon');
-  var lb=document.getElementById('fm-theme-label');
-  if(ic)ic.textContent=n==='dark'?'🌙':'☀️';
-  if(lb)lb.textContent=n==='dark'?'Dark':'Light';
-}
-window.addEventListener('DOMContentLoaded',function(){
-  var t=localStorage.getItem('fm_theme')||'light';
-  var ic=document.getElementById('fm-theme-icon');
-  var lb=document.getElementById('fm-theme-label');
-  if(ic)ic.textContent=t==='dark'?'🌙':'☀️';
-  if(lb)lb.textContent=t==='dark'?'Dark':'Light';
-});
-</script>
+
 </head>
-<body><button onclick="fmToggleTheme()" id="fm-toggle-btn" style="
-  position:fixed;top:14px;right:16px;z-index:9999;
-  display:flex;align-items:center;gap:5px;
-  background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.2);
-  border-radius:20px;padding:5px 12px;cursor:pointer;
-  font-size:11px;font-family:'Space Grotesk',sans-serif;font-weight:500;
-  color:inherit;letter-spacing:0.05em;
-  transition:background 0.2s;
-"><span id="fm-theme-icon">☀️</span><span id="fm-theme-label">Light</span></button>
+<body>
 <div id="cursor"></div>
 
 <!-- HEADER -->
