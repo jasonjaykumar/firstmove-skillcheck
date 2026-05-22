@@ -297,42 +297,98 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
 .cta-sub{font-size:13px;color:rgba(232,230,224,.45);font-weight:300;line-height:1.65;margin-bottom:24px;}
 .btn-primary{background:var(--cream);color:var(--black);border:none;padding:16px 40px;border-radius:50px;font-family:'Space Grotesk',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:none;transition:transform .25s,box-shadow .25s;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,230,224,.15);}
+
+/* ─── LOADING SCREEN ─────────────────────────────────────────────────────────── */
+.fm-loading{
+  position:fixed;inset:0;z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg, #E8E6E0);gap:28px;
+  transition:opacity 0.6s ease, visibility 0.6s ease;
+}
+.fm-loading.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.fm-loading-wordmark{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.2em;
+  color:rgba(10,10,10,0.3);margin-bottom:8px;
+}
+[data-theme="dark"] .fm-loading-wordmark{color:rgba(232,230,224,0.3);}
+.fm-loading-msg{
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:300;
+  color:rgba(10,10,10,0.6);text-align:center;max-width:340px;line-height:1.6;
+  min-height:48px;transition:opacity 0.4s;
+}
+[data-theme="dark"] .fm-loading-msg{color:rgba(232,230,224,0.6);}
+.fm-loading-bar{
+  width:200px;height:1px;background:rgba(10,10,10,0.12);border-radius:1px;overflow:hidden;
+}
+[data-theme="dark"] .fm-loading-bar{background:rgba(232,230,224,0.12);}
+.fm-loading-fill{
+  height:100%;background:#0A0A0A;border-radius:1px;
+  animation:fmBarSlide 1.8s ease-in-out infinite;
+}
+[data-theme="dark"] .fm-loading-fill{background:#E8E6E0;}
+@keyframes fmBarSlide{
+  0%{width:0%;margin-left:0}
+  50%{width:55%;margin-left:22%}
+  100%{width:0%;margin-left:100%}
+}
+.fm-loading-retry{
+  display:none;font-family:'Space Grotesk',sans-serif;font-size:12px;
+  font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:#0A0A0A;background:transparent;border:1px solid rgba(10,10,10,0.3);
+  border-radius:4px;padding:10px 24px;cursor:pointer;margin-top:8px;
+}
+[data-theme="dark"] .fm-loading-retry{color:#E8E6E0;border-color:rgba(232,230,224,0.3);}
+.fm-loading-retry:hover{opacity:0.7;}
+
 </style>
 
-<!-- THEME SYSTEM -->
+
 <script>
-(function(){
-  var t=localStorage.getItem('fm_theme')||'light';
-  document.documentElement.setAttribute('data-theme',t);
-})();
-function fmToggleTheme(){
-  var c=document.documentElement.getAttribute('data-theme')||'light';
-  var n=c==='light'?'dark':'light';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('fm_theme',n);
-  var ic=document.getElementById('fm-theme-icon');
-  var lb=document.getElementById('fm-theme-label');
-  if(ic)ic.textContent=n==='dark'?'🌙':'☀️';
-  if(lb)lb.textContent=n==='dark'?'Dark':'Light';
+// ─── LOADING SCREEN MANAGER ───────────────────────────────────────────────────
+var fmLoadingMsgs = [
+  [0,   'Building your results...'],
+  [15,  'Claude is being thorough — almost there...'],
+  [35,  'Taking a little longer than usual — still on it...'],
+  [60,  'Nearly done — this one needed extra thought...'],
+  [100, 'Still going — hang tight just a moment more...'],
+];
+var fmLoadingTimer = 0;
+var fmLoadingInterval = null;
+
+function fmStartLoading(){
+  fmLoadingTimer = 0;
+  fmLoadingInterval = setInterval(function(){
+    fmLoadingTimer++;
+    var msg = document.getElementById('fm-loading-msg');
+    if(!msg) return;
+    for(var i = fmLoadingMsgs.length-1; i >= 0; i--){
+      if(fmLoadingTimer >= fmLoadingMsgs[i][0]){
+        msg.textContent = fmLoadingMsgs[i][1];
+        break;
+      }
+    }
+    // After 3 minutes show retry
+    if(fmLoadingTimer >= 180){
+      clearInterval(fmLoadingInterval);
+      var retry = document.getElementById('fm-loading-retry');
+      var msgEl = document.getElementById('fm-loading-msg');
+      if(retry) retry.style.display='block';
+      if(msgEl) msgEl.textContent = 'Something took too long. Your data may still be generating.';
+    }
+  }, 1000);
 }
-window.addEventListener('DOMContentLoaded',function(){
-  var t=localStorage.getItem('fm_theme')||'light';
-  var ic=document.getElementById('fm-theme-icon');
-  var lb=document.getElementById('fm-theme-label');
-  if(ic)ic.textContent=t==='dark'?'🌙':'☀️';
-  if(lb)lb.textContent=t==='dark'?'Dark':'Light';
-});
+
+function fmHideLoading(){
+  clearInterval(fmLoadingInterval);
+  var el = document.getElementById('fm-loading');
+  if(el) el.classList.add('hidden');
+}
+
+// Start loading timer on page load
+fmStartLoading();
 </script>
 </head>
-<body><button onclick="fmToggleTheme()" id="fm-toggle-btn" style="
-  position:fixed;top:14px;right:16px;z-index:9999;
-  display:flex;align-items:center;gap:5px;
-  background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.2);
-  border-radius:20px;padding:5px 12px;cursor:pointer;
-  font-size:11px;font-family:'Space Grotesk',sans-serif;font-weight:500;
-  color:inherit;letter-spacing:0.05em;
-  transition:background 0.2s;
-"><span id="fm-theme-icon">☀️</span><span id="fm-theme-label">Light</span></button>
+<body>
 <div id="cursor"></div>
 <div id="top-nav">
   <div class="nav-row">
@@ -520,7 +576,8 @@ function parseClientProfile(raw){
 }
 
 function pollClient(){
-  if(!recordId){ loadFallbackClient(); return; }
+  if(!recordId){ fmHideLoading();
+        loadFallbackClient(); return; }
   fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}`)
     .then(r=>r.json())
     .then(data=>{
@@ -548,10 +605,12 @@ function retryClient(){
     if(el)el.textContent='Still generating your personalised results... hang tight.';
   }
   if(clientPolls < 60) setTimeout(pollClient, 3000);
-  else loadFallbackClient();
+  else fmHideLoading();
+        loadFallbackClient();
 }
 
-function loadFallbackClient(){
+function fmHideLoading();
+        loadFallbackClient(){
   CLIENT_DATA = {
     ideal:{
       name:"Raj, Gym Owner",
