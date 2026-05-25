@@ -187,6 +187,12 @@ opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0
 .hustle-pill-block{flex:1;min-width:140px;}
 .hustle-pill{font-size:12px;color:var(--secondary);font-weight:400;line-height:1.5;padding:10px 14px;border:1px solid var(--divider);border-radius:10px;margin-top:6px;}
 
+.hustle-plitt-quote{
+  font-size:13px;font-style:italic;font-weight:300;color:var(--muted);
+  line-height:1.6;margin-bottom:24px;padding-bottom:20px;
+  border-bottom:1px solid var(--divider);letter-spacing:.02em;
+}
+
 /* ARROWS */
 .hustle-arrows{position:fixed;bottom:36px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;z-index:40;opacity:0;pointer-events:none;transition:opacity .4s ease;}
 .hustle-arrows.visible{opacity:1;pointer-events:auto;}
@@ -505,6 +511,12 @@ function parseHustles(raw){
 function buildScreens(){
   if(hustlesRendered) return;
   hustlesRendered = true;
+  const plittQuotes = [
+    "Go for it. This comfort zone is a dangerous zone. It's stopping you from your true potential.",
+    "\"I failed\" is 10 times the man that \"what if\" ever was. \"What if\" never went to the arena.",
+    "The clock is ticking. Are you becoming the person you want to be?",
+    "You got one life to live. Why wait until tomorrow to start it?",
+  ];
   // Build hustle screens now that data is ready
   [0,1,2,3].forEach(i => {
     const h = HUSTLES[i];
@@ -514,9 +526,9 @@ function buildScreens(){
     screen.innerHTML = `
       <div class="hustle-inner">
         <div class="hustle-locked-name" id="name-${i}">${h.name}</div>
-        <div class="hustle-reframe" id="reframe-${i}">This sounds familiar. Your niche is what makes it yours — keep reading.</div>
         <button class="hustle-reveal-btn" id="reveal-btn-${i}" data-i="${i}">Reveal this move →</button>
         <div class="hustle-content" id="content-${i}">
+          <p class="hustle-plitt-quote">"${plittQuotes[i]}"</p>
           <div class="hustle-meta">
             <div class="meta-item"><span class="meta-label">Earning range</span><span class="meta-value">${h.range}</span></div>
             <div class="meta-item"><span class="meta-label">First month</span><span class="meta-value">${h.firstMonth}</span></div>
@@ -778,50 +790,19 @@ function drawBlackoutStatic(){
 }
 
 function doRevealFlash(hustleIdx, onDone){
-  const bo = document.getElementById('reveal-blackout');
-  const qEl = document.getElementById('blackout-quote');
-  const aEl = document.getElementById('blackout-attr');
-  const qt = REVEAL_QUOTES[hustleIdx % REVEAL_QUOTES.length];
-
-  // Start static
-  drawBlackoutStatic();
-
-  // Fade blackout in
-  bo.style.transition='opacity .25s ease';
-  bo.style.opacity='1';
-  bo.style.pointerEvents='auto';
-
-  // Show quote after 400ms
-  setTimeout(()=>{
-    qEl.textContent = qt.q;
-    aEl.textContent = qt.a;
-    qEl.style.opacity='1'; qEl.style.transform='translateY(0)';
-    aEl.style.opacity='1';
-  }, 400);
-
-  // Light tremor while quote shows — big shake comes on reveal
+  // Color invert flash — 0.6s total
   const screenEl = document.getElementById(`screen-${currentScreen}`);
-  setTimeout(()=>shakeEl(screenEl, 8, 300), 600);
 
-  // Hold for 4s then massive shake + fade out
-  setTimeout(()=>{
-    // Quote fades out
-    qEl.style.opacity='0'; aEl.style.opacity='0';
+  // Stage 1: invert for 0.6s
+  document.body.style.filter = 'invert(1)';
+  setTimeout(()=>{ document.body.style.filter = ''; }, 600);
 
-    // MASSIVE SHAKE — boulder landing
-    const screenEl2 = document.getElementById(`screen-${currentScreen}`);
-    shakeEl(screenEl2, 55, 300);
-    setTimeout(()=>shakeEl(screenEl2, 40, 400), 200);
-    setTimeout(()=>shakeEl(screenEl2, 25, 500), 450);
-    setTimeout(()=>shakeEl(screenEl2, 12, 600), 700);
+  // Stage 2: shake during invert
+  shakeEl(screenEl, 18, 280);
+  setTimeout(()=>shakeEl(screenEl, 10, 400), 200);
 
-    // Fade blackout out while shaking
-    bo.style.transition='opacity .5s ease';
-    bo.style.opacity='0';
-    bo.style.pointerEvents='none';
-    cancelAnimationFrame(bRAF);
-    setTimeout(()=>{ if(onDone) onDone(); }, 520);
-  }, 4000);
+  // Stage 3: reveal after flash settles
+  setTimeout(()=>{ if(onDone) onDone(); }, 680);
 }
 
 // ══════════════════════════════════
@@ -920,14 +901,12 @@ document.body.addEventListener('click', e=>{
 document.getElementById('arr-prev').addEventListener('click',()=>{
   const idx=parseInt(currentScreen.replace('h',''));
   if(idx===0) return;
-  if(idx===2&&plittSeen) goTo('h1');
-  else goTo(`h${idx-1}`);
+  goTo(`h${idx-1}`);
 });
 
 document.getElementById('arr-next').addEventListener('click',()=>{
   const idx=parseInt(currentScreen.replace('h',''));
   if(!revealed[idx]) return;
-  if(idx===1&&!plittSeen){ goTo('plitt'); return; }
   if(idx===3){ goTo('lockin'); return; }
   goTo(`h${idx+1}`);
 });
@@ -1075,7 +1054,7 @@ eduSeq.forEach(({sel,d})=>{
   resizeCL(); window.addEventListener('resize',resizeCL);
   document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
   document.addEventListener('touchmove',e=>{mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
-  const darkScreens=['screen-intro','screen-plitt','screen-h0','screen-h1','screen-h2','screen-h3'];
+  const darkScreens=['screen-intro','screen-h0','screen-h1','screen-h2','screen-h3'];
   function drawCL(){
     cx+=(mx-cx)*.06; cy+=(my-cy)*.06;
     const isDark=darkScreens.includes(currentScreen);

@@ -359,21 +359,38 @@ let toolPolls = 0;
 function cleanT(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseTools(raw){
-  const blocks = raw.split(/\n?---\n?/).filter(b=>b.trim().length>20);
+  // Try multiple separator formats
+  let blocks = raw.split(/\n?-{3,}\n?/).filter(b=>b.trim().length>20);
+  // Fallback: split on TOOL_NAME: appearing more than once
+  if(blocks.length < 2){
+    blocks = raw.split(/(?=\nTOOL_NAME:)/).filter(b=>b.trim().length>20);
+  }
+  // Fallback: split on numbered tool blocks
+  if(blocks.length < 2){
+    blocks = raw.split(/(?=\n?(?:Tool\s*\d|TOOL\s*\d))/i).filter(b=>b.trim().length>20);
+  }
+  // Last resort: treat whole thing as one block
+  if(blocks.length === 0) blocks = [raw];
+
   return blocks.slice(0,4).map(block=>{
     const get = (key) => {
-      const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)');
-      const m = block.match(re);
-      return m ? cleanT(m[1]) : '';
+      // Try multiple casing variants
+      const variants = [key, key.toLowerCase(), key.charAt(0)+key.slice(1).toLowerCase()];
+      for(const k of variants){
+        const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)', 'i');
+        const m = block.match(re);
+        if(m && m[1].trim()) return cleanT(m[1]);
+      }
+      return '';
     };
     const gemRaw = get('HIDDEN_GEM').toUpperCase();
     return {
-      name:  get('TOOL_NAME'),
-      type:  get('TOOL_TYPE'),
-      gem:   gemRaw === 'YES',
-      what:  get('WHAT_IT_DOES'),
-      howTo: get('HOW_TO_USE'),
-      proof: get('PROOF_IT_WORKS')
+      name:  get('TOOL_NAME')  || get('NAME')  || 'Tool',
+      type:  get('TOOL_TYPE')  || get('TYPE')  || '',
+      gem:   gemRaw === 'YES' || gemRaw === 'TRUE',
+      what:  get('WHAT_IT_DOES') || get('WHAT') || '',
+      howTo: get('HOW_TO_USE') || get('HOW') || '',
+      proof: get('PROOF_IT_WORKS') || get('PROOF') || ''
     };
   });
 }
@@ -406,7 +423,11 @@ function retryTools(){
     if(el)el.textContent='Still generating your personalised results... hang tight.';
   }
   if(toolPolls < 60) setTimeout(pollTools, 3000);
-  else fmHideLoading();
+  else {
+    fmHideLoading();
+    // Show empty state if no data after timeout
+    document.getElementById('toolkit-stubs').innerHTML = '<div style="padding:16px;font-size:12px;color:rgba(232,230,224,.4);text-align:center">Could not load tools. Please refresh.</div>';
+  }
 }
 
 

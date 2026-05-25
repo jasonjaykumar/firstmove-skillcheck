@@ -152,6 +152,60 @@ opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0
 .bottom-cta{margin-top:40px;display:flex;flex-direction:column;gap:10px;opacity:0;}
 .bottom-cta.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
 
+/* QUESTION REVIEW */
+.review-wrap{margin-top:36px;opacity:0;transform:translateY(16px);}
+.review-wrap.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.review-header{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,36px);color:var(--black);letter-spacing:.01em;margin-bottom:6px;}
+.review-sub{font-size:12px;color:var(--muted);font-weight:300;margin-bottom:20px;}
+.q-card{
+  border:1.5px solid var(--divider);border-radius:16px;padding:18px 20px;
+  margin-bottom:10px;position:relative;overflow:hidden;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1);
+}
+.q-card.go{opacity:1;transform:translateY(0);}
+.q-card.correct{border-color:rgba(34,139,34,0.4);background:rgba(34,139,34,0.04);}
+.q-card.wrong{border-color:rgba(180,30,30,0.4);background:rgba(180,30,30,0.04);}
+.q-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;
+}
+.q-card.correct::before{background:#228B22;}
+.q-card.wrong::before{background:#B41E1E;}
+@keyframes wrongShake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+.q-card.wrong.go{animation:wrongShake .4s ease, slideUp .5s cubic-bezier(.22,1,.36,1);}
+@keyframes correctFill{
+  from{width:0%}to{width:100%}
+}
+.q-card.correct .q-fill{
+  position:absolute;inset:0;background:rgba(34,139,34,0.06);
+  animation:correctFill .6s cubic-bezier(.22,1,.36,1) forwards;
+  pointer-events:none;z-index:0;
+}
+.q-num{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;position:relative;z-index:1;}
+.q-text{font-size:13px;color:var(--black);font-weight:500;line-height:1.5;margin-bottom:10px;position:relative;z-index:1;}
+.q-your-answer{font-size:11px;color:var(--muted);margin-bottom:4px;position:relative;z-index:1;}
+.q-correct-answer{font-size:11px;font-weight:600;position:relative;z-index:1;}
+.q-card.correct .q-correct-answer{color:#228B22;}
+.q-card.wrong .q-correct-answer{color:#B41E1E;}
+.q-why{font-size:11px;color:var(--muted);font-weight:300;line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--divider);position:relative;z-index:1;}
+.q-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;
+  padding:3px 10px;border-radius:50px;margin-bottom:8px;position:relative;z-index:1;
+}
+.q-badge.correct{background:rgba(34,139,34,0.12);color:#228B22;}
+.q-badge.wrong{background:rgba(180,30,30,0.1);color:#B41E1E;}
+
+/* CTA SINGLE */
+.cta-single{margin:28px 0;opacity:0;transform:translateY(16px);}
+.cta-single.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+
 /* ANIMATIONS */
 @keyframes slideUp{to{opacity:1;transform:translateY(0);}}
 
@@ -320,18 +374,14 @@ fmStartLoading();
     </div>
   </div>
 
-  <div class="cta-block" id="cta-block">
-    <div class="cta-split">
-      <div class="cta-option">
-        <button class="btn-primary" id="btn-continue">Show me my moves</button>
-        <p class="cta-desc">Jump straight to your personalised hustle recommendations. You can always come back to sharpen your skills later — nothing locks behind you.</p>
-      </div>
-      <div class="cta-divider"></div>
-      <div class="cta-option">
-        <button class="btn-secondary" id="btn-arsenal">Sharpen my arsenal</button>
-        <p class="cta-desc">Work through 4 targeted resources first. Takes one week. Your recommendations wait for you — they'll be here when you're done.</p>
-      </div>
-    </div>
+  <div class="cta-single" id="cta-block">
+    <button class="btn-primary" id="btn-continue">Show me my moves</button>
+  </div>
+
+  <div class="review-wrap" id="review-wrap">
+    <div class="review-header">How you did.</div>
+    <p class="review-sub">Every question. Where you landed and why it matters.</p>
+    <div id="q-cards"></div>
   </div>
 </div>
 
@@ -447,7 +497,6 @@ document.getElementById('breakdown-card').className = `breakdown-card ${cfg.badg
 document.getElementById('breakdown-card-text').textContent = cfg.cardText;
 document.getElementById('nav-name').textContent = name;
 document.getElementById('btn-continue').textContent = cfg.btnContinue;
-document.getElementById('btn-arsenal').textContent = cfg.btnArsenal;
 
 // Show personalised breakdown if available
 if(BREAKDOWN && BREAKDOWN.length > 10){
@@ -456,13 +505,14 @@ if(BREAKDOWN && BREAKDOWN.length > 10){
 
 // REVEAL MAP
 const revealMap = [
-  {id:'status-badge', delay:0},
-  {id:'headline',     delay:150},
-  {id:'score-block',  delay:300},
-  {id:'score-label',  delay:420},
+  {id:'status-badge',  delay:0},
+  {id:'headline',      delay:150},
+  {id:'score-block',   delay:300},
+  {id:'score-label',   delay:420},
   {id:'score-bar-wrap',delay:500},
   {id:'breakdown-wrap',delay:620},
-  {id:'cta-block',    delay:780},
+  {id:'cta-block',     delay:780},
+  {id:'review-wrap',   delay:950},
 ];
 
 revealMap.filter(r=>!r.scroll).forEach(r=>{
@@ -471,6 +521,7 @@ revealMap.filter(r=>!r.scroll).forEach(r=>{
     if(el) el.classList.add('go');
     if(r.id==='score-block') startCounter();
     if(r.id==='score-bar-wrap') setTimeout(()=>{ document.getElementById('score-bar-fill').style.width=`${(SCORE/12)*100}%`; },100);
+    if(r.id==='review-wrap') renderQuestionReview();
   }, r.delay);
 });
 
@@ -499,6 +550,51 @@ function startCounter(){
     else el.textContent=SCORE;
   }
   requestAnimationFrame(tick);
+}
+
+// QUESTION REVIEW
+function renderQuestionReview(){
+  const container = document.getElementById('q-cards');
+  if(!container) return;
+  // Parse per-question results from FIELDS if available
+  // Expected format in Grade field: QUESTIONS: Q1|your_answer|correct_answer|why\nQ2|...
+  const raw = FIELDS['Grade'] || '';
+  const qSection = (raw.match(/QUESTIONS:([\s\S]*?)(?=\n[A-Z_]+:|$)/) || [])[1] || '';
+  const lines = qSection.trim().split('\n').filter(l=>l.trim().length>5);
+
+  // Fallback: generate placeholder cards based on score
+  if(lines.length === 0){
+    container.innerHTML = `<p style="font-size:13px;color:var(--muted);font-weight:300;line-height:1.6">
+      Detailed question breakdown will appear here after your next skill check.
+    </p>`;
+    return;
+  }
+
+  lines.forEach((line, idx)=>{
+    const parts = line.split('|');
+    const qText    = (parts[0]||'').trim();
+    const yourAns  = (parts[1]||'').trim();
+    const correctAns=(parts[2]||'').trim();
+    const why      = (parts[3]||'').trim();
+    const isCorrect = yourAns.toLowerCase() === correctAns.toLowerCase()
+                   || (parts[4]||'').trim().toUpperCase() === 'CORRECT';
+
+    const card = document.createElement('div');
+    card.className = `q-card ${isCorrect?'correct':'wrong'}`;
+    card.innerHTML = `
+      ${isCorrect ? '<div class="q-fill"></div>' : ''}
+      <div class="q-badge ${isCorrect?'correct':'wrong'}">${isCorrect?'✓ Correct':'✗ Wrong'}</div>
+      <div class="q-num">Question ${idx+1}</div>
+      <div class="q-text">${qText}</div>
+      <div class="q-your-answer">Your answer: <strong>${yourAns||'—'}</strong></div>
+      <div class="q-correct-answer">Correct answer: ${correctAns||'—'}</div>
+      ${why ? `<div class="q-why">${why}</div>` : ''}
+    `;
+    container.appendChild(card);
+
+    // Staggered reveal
+    setTimeout(()=>card.classList.add('go'), idx * 120);
+  });
 }
 
 } // end applyData
