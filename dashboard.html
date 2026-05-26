@@ -1646,12 +1646,51 @@ async function fetchModuleDetail(index){
 async function fireS8B(index){
   const mod = state.modules[index];
   if(!mod||!RECORD_ID) return;
-  fetch(S8B_WEBHOOK, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({id:RECORD_ID,moduleNumber:index+1,moduleTitle:mod.title,
-      modulePhase:mod.phase,moduleType:mod.type,hustle:HUSTLE,niche:NICHE,name:NAME})
-  }).catch(()=>{});
+  // Fetch full record to get user context fields
+  try{
+    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=1`);
+    const d = await r.json();
+    const f = d.fields || {};
+    const get = (keys) => { for(const k of keys){ const v=f[k]; if(v) return v; } return ''; };
+    fetch(S8B_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        recordId:        RECORD_ID,
+        moduleNumber:    index+1,
+        moduleTitle:     mod.title,
+        moduleType:      mod.type,
+        modulePhase:     mod.phase,
+        hustle:          HUSTLE,
+        niche:           NICHE,
+        name:            get(['Name','name']) || NAME,
+        age:             get(['Age','age']),
+        city:            get(['City','city']),
+        skillArea:       get(['Skills Multi','Skill Area']),
+        comfortLevel:    get(['Comfort Level','comfortLevel']) || 'INTERMEDIATE',
+        languages:       get(['Languages ','Languages']),
+        enjoysDoing:     get(['Enjoys doing','enjoysDoing']),
+        completedModules: Array.from(state.completed).join(',')
+      })
+    }).catch(()=>{});
+  } catch(e){
+    // Fallback with minimal fields
+    fetch(S8B_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        recordId:     RECORD_ID,
+        moduleNumber: index+1,
+        moduleTitle:  mod.title,
+        moduleType:   mod.type,
+        modulePhase:  mod.phase,
+        hustle:       HUSTLE,
+        niche:        NICHE,
+        name:         NAME,
+        comfortLevel: 'INTERMEDIATE'
+      })
+    }).catch(()=>{});
+  }
 }
 
 let pollTimer;
