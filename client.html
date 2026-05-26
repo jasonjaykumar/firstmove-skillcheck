@@ -422,28 +422,37 @@ let CLIENT_DATA = null;
 function cleanC(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseSpeech(raw, tagType){
-  // Normalise tags first - handle ][/GREEN] edge case from Claude
-  raw = (raw||'').replace(/\]\[\/(GREEN|RED)\]/g, '[/$1]');
-  const openTag  = tagType==='green' ? '[GREEN]' : '[RED]';
-  const closeTag = tagType==='green' ? '[/GREEN]' : '[/RED]';
+  // S7 writes inline brackets like [I've got the budget] for emphasis
+  // We detect these and colour them green (ideal) or red (walkaway)
   const segments = [];
-  let remaining = raw;
-  while(remaining.length > 0){
-    const openIdx = remaining.indexOf(openTag);
-    if(openIdx === -1){
-      if(remaining.trim()) segments.push({text:remaining, type:'normal'});
-      break;
+  const text = (raw||'').trim();
+  // Split on [bracketed content] — anything in square brackets gets coloured
+  const parts = text.split(/(\[[^\]]+\])/g);
+  parts.forEach(part => {
+    if(!part) return;
+    if(part.startsWith('[') && part.endsWith(']')){
+      // Strip the brackets, colour the text
+      segments.push({text: part.slice(1,-1), type: tagType});
+    } else {
+      if(part) segments.push({text: part, type:'normal'});
     }
-    if(openIdx > 0){
-      segments.push({text:remaining.slice(0,openIdx), type:'normal'});
+  });
+  // Fallback: if no brackets found, check for [GREEN]/[RED] tags (old format)
+  if(segments.length <= 1 && text.includes('[GREEN]')){
+    const openTag  = tagType==='green' ? '[GREEN]'  : '[RED]';
+    const closeTag = tagType==='green' ? '[/GREEN]' : '[/RED]';
+    const segs2 = [];
+    let remaining = text;
+    while(remaining.length > 0){
+      const openIdx = remaining.indexOf(openTag);
+      if(openIdx === -1){ if(remaining.trim()) segs2.push({text:remaining,type:'normal'}); break; }
+      if(openIdx > 0) segs2.push({text:remaining.slice(0,openIdx),type:'normal'});
+      const closeIdx = remaining.indexOf(closeTag, openIdx);
+      if(closeIdx === -1){ segs2.push({text:remaining.slice(openIdx+openTag.length),type:tagType}); break; }
+      segs2.push({text:remaining.slice(openIdx+openTag.length,closeIdx),type:tagType});
+      remaining = remaining.slice(closeIdx+closeTag.length);
     }
-    const closeIdx = remaining.indexOf(closeTag, openIdx);
-    if(closeIdx === -1){
-      segments.push({text:remaining.slice(openIdx+openTag.length), type:tagType});
-      break;
-    }
-    segments.push({text:remaining.slice(openIdx+openTag.length, closeIdx), type:tagType});
-    remaining = remaining.slice(closeIdx+closeTag.length);
+    return segs2;
   }
   return segments;
 }
@@ -451,15 +460,20 @@ function parseSpeech(raw, tagType){
 function parseClientProfile(raw){
   const text = cleanC(raw);
   const get = (key) => {
-    // Match key: content, stopping at next ALL-CAPS key or end
-    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n\\n?[A-Z][A-Z_]+:|$)', 'm');
-    const m = text.match(re);
-    return m ? cleanC(m[1]) : '';
+    const noUnderscore = key.replace(/_/g,'');
+    const variants = [key, noUnderscore];
+    for(const k of variants){
+      const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n\\n?[A-Z][A-Z_0-9]+:|$)', 'm');
+      const m = text.match(re);
+      if(m && m[1].trim()) return cleanC(m[1]);
+    }
+    return '';
   };
   const getFlag = (prefix) => {
     const flags = [];
     for(let i=1;i<=6;i++){
-      const val = get(prefix+'_FLAG_'+i);
+      // Try both IDEAL_FLAG_1 and IDEALFLAG1 formats
+      const val = get(prefix+'_FLAG_'+i) || get(prefix+'FLAG'+i);
       if(val) flags.push(val);
     }
     return flags;
@@ -489,8 +503,12 @@ function parseClientProfile(raw){
 }
 
 function pollClient(){
-  if(!recordId){ loadFallbackClient(); return; }
-  fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}`)
+  if(!recordId){
+    // No record — show fallback stickmen only, hide tab section
+    document.getElementById('tab-nav')?.style?.setProperty('display','none');
+    return;
+  }
+  fetch(`${WORKER_CLIENT}?id=${encodeURIComponent(recordId)}&bust=1`)
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
@@ -513,7 +531,11 @@ function pollClient(){
 function retryClient(){
   clientPolls++;
   if(clientPolls < 40) setTimeout(pollClient, 3000);
-  else loadFallbackClient();
+  else {
+    // Timed out — show generic message
+    document.getElementById('hint-ideal').textContent = 'Tap me';
+    document.getElementById('hint-walkaway').textContent = 'Tap me';
+  }
 }
 
 function loadFallbackClient(){
@@ -578,6 +600,8 @@ function initClientPage(){
   const iconWalkaway = document.getElementById('icon-walkaway');
   if(iconIdeal)    iconIdeal.style.opacity    = '1';
   if(iconWalkaway) iconWalkaway.style.opacity = '1';
+  // Build personalised tab content
+  buildTabContent();
 }
 
 // Show loading state on profile icons while waiting
@@ -588,52 +612,59 @@ if(recordId){
 // Start poll
 setTimeout(pollClient, 5000);
 
-const WHERE_DATA=[
-  {title:"Instagram Search",text:"Search your city plus your niche — 'Bengaluru gym' or 'Bengaluru fitness studio'. Filter accounts with 200 to 2000 followers. Look for inconsistent posting and weak captions. These are your warmest prospects."},
-  {title:"Google Maps",text:"Search your niche in your city. Every business without a linked Instagram or with a dead profile is a potential client. If their website hasn't updated in a year, they\'re ignoring digital entirely."},
-  {title:"Local Facebook Groups",text:"Groups like 'Bengaluru Fitness Community' or 'Small Business Bengaluru' are full of business owners posting with no engagement. That low engagement is the pain point you solve."},
-  {title:"Walk In",text:"Go to 3 gyms near you. Ask for the owner. Bring a printed one-page audit of their Instagram — 3 things wrong, what you'd fix. Nobody does this. It's immediately memorable."}
-];
-const APPROACH_DATA=[
-  {type:"script",label:"The Opening Message",text:"Don't pitch in the first message. Send an observation: \"Hey [name], I noticed your reach dropped since you switched to text-only posts in March. I work with fitness businesses in Bengaluru on exactly this. Would a quick breakdown of what I'd change be useful?\" Short, specific, valuable. You're not asking for money yet."},
-  {type:"script",label:"What to Bring",text:"A one-page audit of their current Instagram. Screenshot their last 9 posts. Note average engagement. Find one competitor doing it better and explain why. Printed or on your phone. 30 minutes of prep that communicates more than any pitch deck."},
-  {type:"script",label:"When They Say What's Your Experience",text:"Don't lie and don\'t panic. Say: \"I'm building my portfolio specifically in this niche. I'd like to offer you the first month at a reduced rate in exchange for honest feedback and a testimonial if you\'re happy.\" Confidence beats credentials at this stage."}
-];
-const PRICING_DATA=[
-  {label:"Starter",price:"₹5,000",per:"/mo",desc:"3 posts per week, basic captions, monthly report. Your first client rate — you\'re buying a testimonial as much as earning money.",tag:"First client only",hot:false},
-  {label:"Standard",price:"₹10,000",per:"/mo",desc:"5 posts per week, captions, Stories, monthly analytics report, one round of revisions. Once you have one testimonial. Most clients will be here.",tag:"Your target rate",hot:true,featured:true},
-  {label:"Premium",price:"₹18,000",per:"/mo",desc:"Daily content, full strategy, competitor monitoring, detailed reporting. Don't charge this until you have 3 months of results. When you do — don\'t be afraid.",tag:"After proof",hot:false}
-];
+// Tab content built from CLIENT_DATA after poll completes
+function buildTabContent(){
+  if(!CLIENT_DATA) return;
+  // WHERE TO FIND
+  const whereEl = document.getElementById("where-cards");
+  if(whereEl) whereEl.innerHTML = `
+    <div class="method-card go">
+      <span class="method-num">01</span>
+      <div class="method-text"><strong>Start with your ideal client's world.</strong> Your client profile tells you exactly who they are and what they care about. Go where that person already spends time — the platforms they named, the communities they're in.</div>
+    </div>
+    <div class="method-card go" style="transition-delay:.08s">
+      <span class="method-num">02</span>
+      <div class="method-text"><strong>Your 60-module plan gives you the exact steps.</strong> Modules 3–5 walk you through finding, approaching, and closing your first client with scripts built specifically for your hustle and niche — not generic advice.</div>
+    </div>
+  `;
 
-// BUILD WHERE
+  // APPROACH — use ideal client worth as anchor
+  const worth = CLIENT_DATA?.ideal?.details?.find(d=>d.label?.includes('Worth'))?.text || '';
+  const approachEl = document.getElementById("approach-content");
+  if(approachEl) approachEl.innerHTML = worth
+    ? `<div class="approach-script go"><strong>What this client is worth to you</strong><br><br>${worth}</div>`
+    : `<div class="approach-script go"><strong>Your approach is in your module plan.</strong><br><br>The first cold outreach module gives you a word-for-word script built for your specific hustle, niche, and city. Don't improvise it — follow the system.</div>`;
+
+  // PRICING
+  const pricingEl = document.getElementById("pricing-content");
+  if(pricingEl) pricingEl.innerHTML = `
+    <div class="price-tier go">
+      <div class="tier-label">Starter</div>
+      <div class="tier-price">₹3,000–5,000<span style="font-size:16px;opacity:.5;">/mo</span></div>
+      <p class="tier-desc">Your first client rate. You're buying proof as much as earning money. One testimonial unlocks your next tier.</p>
+      <span class="tier-tag">First client only</span>
+    </div>
+    <div class="price-tier featured go" style="transition-delay:.1s">
+      <div class="tier-label">Standard</div>
+      <div class="tier-price">₹8,000–15,000<span style="font-size:16px;opacity:.5;">/mo</span></div>
+      <p class="tier-desc">Once you have one testimonial. Module 22 unlocks your first rate upgrade when your case study is built.</p>
+      <span class="tier-tag hot">Your target rate</span>
+    </div>
+    <div class="price-tier go" style="transition-delay:.2s">
+      <div class="tier-label">Premium</div>
+      <div class="tier-price">₹20,000+<span style="font-size:16px;opacity:.5;">/mo</span></div>
+      <p class="tier-desc">After 3 months of results. Module 38 unlocks this. When you get here, don't be afraid to charge it.</p>
+      <span class="tier-tag">After proof</span>
+    </div>
+  `;
+}
+
+// Placeholder while loading
 const whereEl=document.getElementById("where-cards");
-WHERE_DATA.forEach((w,i)=>{
-  const d=document.createElement("div");
-  d.className="method-card";
-  d.style.transitionDelay=(i*.08)+"s";
-  d.innerHTML=`<span class="method-num">0${i+1}</span><div class="method-text"><strong>${w.title}</strong>${w.text}</div>`;
-  whereEl.appendChild(d);
-});
-
-// BUILD APPROACH
+if(whereEl) whereEl.innerHTML='<div style="padding:16px;font-size:13px;color:var(--muted);font-weight:300;line-height:1.6">Loading your personalised client locations...</div>';
 const approachEl=document.getElementById("approach-content");
-APPROACH_DATA.forEach((a,i)=>{
-  const d=document.createElement("div");
-  d.className="approach-script";
-  d.style.transitionDelay=(i*.12)+"s";
-  d.innerHTML=`<strong>${a.label}</strong><br><br>${a.text}`;
-  approachEl.appendChild(d);
-});
-
-// BUILD PRICING
+if(approachEl) approachEl.innerHTML='<div style="padding:16px;font-size:13px;color:var(--muted);font-weight:300;line-height:1.6">Loading...</div>';
 const pricingEl=document.getElementById("pricing-content");
-PRICING_DATA.forEach((p,i)=>{
-  const d=document.createElement("div");
-  d.className="price-tier"+(p.featured?" featured":"");
-  d.style.transitionDelay=(i*.1)+"s";
-  d.innerHTML=`<div class="tier-label">${p.label}</div><div class="tier-price">${p.price}<span style="font-size:16px;opacity:.5;">${p.per}</span></div><p class="tier-desc">${p.desc}</p><span class="tier-tag${p.hot?" hot":""}">${p.tag}</span>`;
-  pricingEl.appendChild(d);
-});
 
 // TABS
 document.querySelectorAll(".tab-btn").forEach(btn=>{
@@ -914,7 +945,7 @@ document.getElementById("btn-next").addEventListener("click",async()=>{
     }).catch(e=>console.warn('S7 webhook error:',e));
   }
 
-  window.location.href=`mission.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
+  window.location.href=`dashboard.html?id=${recordId}&hustle=${encodeURIComponent(hustle)}&niche=${encodeURIComponent(niche)}&name=${encodeURIComponent(userName)}`;
 });
 
 // BREATHING

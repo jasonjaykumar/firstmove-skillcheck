@@ -2051,24 +2051,30 @@ async function fireS8A(){
   if(!RECORD_ID) return;
   // Fetch full user record from Airtable to get all fields
   try{
-    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}`);
+    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=1`);
     const d = await r.json();
     const f = d.fields || {};
+    // Helper — tries multiple key variants including trailing space
+    const get = (keys) => { for(const k of keys){ const v = f[k]; if(v) return v; } return ''; };
     fetch(S8A_WEBHOOK, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        id: RECORD_ID,
-        name: f['Name'] || f['name'] || NAME,
-        age: f['Age'] || f['age'] || '',
-        city: f['City'] || f['city'] || '',
-        skillArea: f['Skill Area'] || f['skillArea'] || '',
-        hustle: HUSTLE,
-        niche: NICHE,
-        tools: f['Tool Suggestions'] ? 'From Airtable' : '',
-        earningGoal: f['Earning Goal'] || f['earningGoal'] || '',
-        timeAvailable: f['Time Available'] || f['timeAvailable'] || '',
-        comfortLevel: f['Comfort Level'] || f['comfortLevel'] || 'INTERMEDIATE'
+        recordId:      RECORD_ID,
+        name:          get(['Name','name']) || NAME,
+        age:           get(['Age','age']),
+        city:          get(['City','city']),
+        skillArea:     get(['Skills Multi','Skill Area','skillArea']),
+        hustle:        HUSTLE,
+        niche:         NICHE,
+        tools:         get(['Tool Suggestions','tool_suggestions']),
+        earningGoal:   get(['Earning goal','Earning Goal','earningGoal']),
+        timeAvailable: get(['Time Available','timeAvailable']),
+        comfortLevel:  get(['Comfort Level','comfortLevel']) || 'INTERMEDIATE',
+        languages:     get(['Languages ','Languages','languages']),
+        enjoysDoing:   get(['Enjoys doing','enjoysDoing']),
+        previousAttempts: get(['Previous Attempts ','Previous Attempts','previousAttempts']),
+        deviceAccess:  get(['Device access multi','deviceAccess'])
       })
     }).catch(e=>console.warn('S8A webhook error:', e));
   } catch(e){
@@ -2077,7 +2083,7 @@ async function fireS8A(){
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        id: RECORD_ID,
+        recordId: RECORD_ID,
         name: NAME,
         hustle: HUSTLE,
         niche: NICHE,

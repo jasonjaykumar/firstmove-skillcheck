@@ -359,46 +359,44 @@ let toolPolls = 0;
 function cleanT(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseTools(raw){
-  // Try multiple separator formats
+  // Split on --- separator
   let blocks = raw.split(/\n?-{3,}\n?/).filter(b=>b.trim().length>20);
-  // Fallback: split on TOOL_NAME: appearing more than once
   if(blocks.length < 2){
-    blocks = raw.split(/(?=\nTOOL_NAME:)/).filter(b=>b.trim().length>20);
+    blocks = raw.split(/(?=TOOL_NAME:)/).filter(b=>b.trim().length>20);
   }
-  // Fallback: split on numbered tool blocks
-  if(blocks.length < 2){
-    blocks = raw.split(/(?=\n?(?:Tool\s*\d|TOOL\s*\d))/i).filter(b=>b.trim().length>20);
-  }
-  // Last resort: treat whole thing as one block
   if(blocks.length === 0) blocks = [raw];
 
   return blocks.slice(0,4).map(block=>{
+    // Try both underscore and no-underscore variants
     const get = (key) => {
-      // Try multiple casing variants
-      const variants = [key, key.toLowerCase(), key.charAt(0)+key.slice(1).toLowerCase()];
+      const noUnderscore = key.replace(/_/g,'');
+      const variants = [key, noUnderscore];
       for(const k of variants){
-        const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)', 'i');
+        const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_0-9]+:|$)', 'i');
         const m = block.match(re);
-        if(m && m[1].trim()) return cleanT(m[1]);
+        if(m && m[1].trim()) return m[1].replace(/\*\*/g,'').replace(/\*/g,'').trim();
       }
       return '';
     };
-    const gemRaw = get('HIDDEN_GEM').toUpperCase();
+    const gemRaw = get('HIDDEN_GEM').toUpperCase().trim();
     return {
-      name:  get('TOOL_NAME')  || get('NAME')  || 'Tool',
-      type:  get('TOOL_TYPE')  || get('TYPE')  || '',
+      name:  get('TOOL_NAME')  || 'Tool',
+      type:  get('TOOL_TYPE')  || '',
       gem:   gemRaw === 'YES' || gemRaw === 'TRUE',
-      what:  get('WHAT_IT_DOES') || get('WHAT') || '',
-      howTo: get('HOW_TO_USE') || get('HOW') || '',
-      proof: get('PROOF_IT_WORKS') || get('PROOF') || ''
+      what:  get('WHAT_IT_DOES') || '',
+      howTo: get('HOW_TO_USE')   || '',
+      proof: get('PROOF_IT_WORKS') || ''
     };
   });
 }
 
 function pollTools(){
-  if(!recordId){ fmHideLoading();
-        loadFallbackTools(); return; }
-  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+  if(!recordId){
+    fmHideLoading();
+    document.getElementById('toolkit-stubs').innerHTML = '<div style="padding:16px;font-size:12px;color:rgba(232,230,224,.4);text-align:center">No record ID found. Please start from the beginning.</div>';
+    return;
+  }
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}&bust=1`)
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
