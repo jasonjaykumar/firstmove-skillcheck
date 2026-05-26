@@ -475,13 +475,18 @@ function cleanRec(t){ return (t||'').replace(/\*\*/g,'').replace(/\*/g,'').repla
 
 function parseHustles(raw){
   const text = cleanRec(raw);
-  // Split on HUSTLE_NAME: delimiter
   const blocks = text.split(/(?=HUSTLE_NAME:)/g).filter(b=>b.trim().length>20);
   return blocks.slice(0,4).map(block=>{
     const get = (key) => {
-      const re = new RegExp(key + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|---)');
-      const m  = block.match(re);
-      return m ? cleanRec(m[1]) : '';
+      // Try both with-underscore and no-underscore variants
+      const noUnderscore = key.replace(/_/g,'');
+      const variants = [key, noUnderscore];
+      for(const k of variants){
+        const re = new RegExp(k + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|---)');
+        const m = block.match(re);
+        if(m && m[1].trim()) return cleanRec(m[1]);
+      }
+      return '';
     };
     const name = (block.match(/HUSTLE_NAME:\s*(.+)/) || [])[1] || '';
     const commitRaw = get('COMMITMENT_SUMMARY');
@@ -497,12 +502,12 @@ function parseHustles(raw){
       firstMonth:  get('FIRST_MONTH')  || '₹3,000–₹8,000 realistic first month',
       hours:       get('HOURS')        || '8–12 hrs/week',
       timeline:    get('TIMELINE')     || 'First payment in 2–3 weeks',
-      whatItIs:    get('WHAT_IT_IS')   || '',
-      dayToDay:    get('TYPICAL_DAY')  || '',
+      whatItIs:    get('WHAT_IT_IS')   || get('WHATIITIS')  || '',
+      dayToDay:    get('TYPICAL_DAY')  || get('TYPICALDAY') || '',
       saturation:  get('SATURATION')   || '',
       competition: get('COMPETITION')  || '',
-      whyNeeded:   get('WHY_MARKET')   || '',
-      why:         get('WHY_YOU')      || '',
+      whyNeeded:   get('WHY_MARKET')   || get('WHYMARKET')  || '',
+      why:         get('WHY_YOU')      || get('WHYYOU')     || '',
       summary:     commitBullets       || ''
     };
   });
