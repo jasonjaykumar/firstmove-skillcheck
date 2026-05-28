@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Tell Us Everything</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0a0a0a;
+  --surface:#111111;
+  --border:#1e1e1e;
+  --text:#E8E6E0;
+  --muted:#4a4a4a;
+  --accent:#E8E6E0;
+  --red:#B41E1E;
+  --green:#228B22;
+  --cream:#F5F2EB;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;}
+
+/* GRAIN */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+/* SCREENS */
+.screen{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:32px 24px;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.35s ease, transform 0.35s cubic-bezier(0.22,1,0.36,1);
+  transform:translateX(60px);
+}
+.screen.active{opacity:1;pointer-events:all;transform:translateX(0);}
+.screen.exit{opacity:0;transform:translateX(-60px);pointer-events:none;}
+
+/* PROGRESS */
+.progress-bar{
+  position:fixed;bottom:0;left:0;height:2px;
+  background:var(--text);z-index:100;
+  transition:width 0.4s cubic-bezier(0.22,1,0.36,1);
+  width:0%;
+}
+
+/* NAV */
+.quiz-nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px;
+}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.12em;color:var(--text);opacity:0.6;}
+.nav-counter{font-size:11px;letter-spacing:.18em;color:var(--muted);font-weight:300;}
+.nav-back{
+  font-size:11px;letter-spacing:.14em;color:var(--muted);cursor:pointer;
+  background:none;border:none;font-family:'Space Grotesk',sans-serif;
+  transition:color .2s;padding:4px;
+}
+.nav-back:hover{color:var(--text);}
+
+/* ENTRY SCREEN */
+.entry-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;font-weight:300;}
+.entry-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,10vw,88px);line-height:.95;letter-spacing:.02em;margin-bottom:24px;text-align:center;}
+.entry-sub{font-size:14px;color:var(--muted);font-weight:300;line-height:1.7;text-align:center;max-width:360px;margin-bottom:48px;}
+.entry-sub strong{color:var(--text);font-weight:500;}
+.btn-start{
+  background:var(--text);color:var(--bg);
+  border:none;padding:16px 40px;
+  font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.12em;
+  cursor:pointer;border-radius:2px;
+  transition:opacity .2s, transform .15s;
+}
+.btn-start:hover{opacity:.88;transform:translateY(-1px);}
+.btn-start:active{transform:translateY(0);}
+
+/* QUESTION SCREEN */
+.q-section-label{
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:12px;font-weight:300;
+  align-self:flex-start;max-width:560px;width:100%;
+}
+.q-text{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(28px,5.5vw,48px);
+  line-height:1.05;letter-spacing:.02em;
+  color:var(--text);
+  margin-bottom:8px;
+  align-self:flex-start;max-width:560px;width:100%;
+}
+.q-example{
+  font-size:12px;color:var(--muted);font-weight:300;
+  line-height:1.6;margin-bottom:28px;
+  align-self:flex-start;max-width:560px;width:100%;
+  font-style:italic;
+}
+
+/* OPTIONS */
+.options{display:flex;flex-direction:column;gap:8px;width:100%;max-width:560px;align-self:flex-start;}
+.opt{
+  border:1.5px solid var(--border);border-radius:8px;
+  padding:14px 18px;cursor:pointer;
+  font-size:14px;font-weight:400;color:var(--text);
+  transition:border-color .15s, background .15s, transform .1s;
+  display:flex;align-items:center;gap:12px;
+  user-select:none;
+}
+.opt:hover{border-color:#333;background:rgba(255,255,255,.03);transform:translateX(3px);}
+.opt.selected{border-color:var(--text);background:rgba(232,230,224,.06);}
+.opt .opt-check{
+  width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:border-color .15s, background .15s;
+}
+.opt.selected .opt-check{border-color:var(--text);background:var(--text);}
+.opt.selected .opt-check::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--bg);}
+/* Multi select uses square */
+.multi .opt .opt-check{border-radius:3px;}
+.multi .opt.selected .opt-check::after{content:'✓';font-size:11px;color:var(--bg);font-weight:700;background:none;}
+
+/* FREE TEXT */
+.q-input{
+  width:100%;max-width:560px;align-self:flex-start;
+  background:transparent;border:none;border-bottom:1.5px solid var(--border);
+  color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:300;
+  padding:12px 0;outline:none;
+  transition:border-color .2s;caret-color:var(--text);
+}
+.q-input:focus{border-color:var(--text);}
+.q-input::placeholder{color:var(--muted);}
+
+/* CONTINUE BUTTON */
+.btn-continue{
+  margin-top:24px;align-self:flex-start;
+  background:transparent;border:1.5px solid var(--border);
+  color:var(--text);padding:12px 28px;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;
+  cursor:pointer;border-radius:2px;
+  transition:border-color .2s, background .2s, opacity .2s;
+  opacity:0;pointer-events:none;
+}
+.btn-continue.visible{opacity:1;pointer-events:all;}
+.btn-continue:hover{border-color:var(--text);background:rgba(232,230,224,.06);}
+
+/* PLITT QUOTE */
+.plitt-quote{
+  position:fixed;bottom:24px;left:0;right:0;
+  text-align:center;font-size:11px;font-style:italic;
+  color:var(--muted);font-weight:300;letter-spacing:.02em;
+  padding:0 24px;z-index:50;
+  transition:opacity .4s ease;
+  line-height:1.6;
+}
+
+/* REASSURANCE SCREEN */
+.reassurance-screen{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 32px;opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.reassurance-screen.active{opacity:1;pointer-events:all;}
+.reassurance-line{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(24px,5vw,42px);
+  letter-spacing:.04em;color:var(--text);
+  text-align:center;max-width:560px;
+  margin-bottom:20px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1);
+}
+.reassurance-sub{
+  font-size:14px;color:var(--muted);font-weight:300;
+  line-height:1.8;text-align:center;max-width:440px;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .5s ease .2s, transform .5s cubic-bezier(.22,1,.36,1) .2s;
+}
+.reassurance-screen.active .reassurance-line,
+.reassurance-screen.active .reassurance-sub{opacity:1;transform:translateY(0);}
+
+/* LOADING SCREEN */
+.loading-screen{
+  position:fixed;inset:0;z-index:300;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 32px;opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.loading-screen.active{opacity:1;pointer-events:all;}
+.loading-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(36px,8vw,72px);
+  letter-spacing:.04em;color:var(--text);
+  text-align:center;margin-bottom:48px;
+}
+.loading-lines{display:flex;flex-direction:column;gap:14px;width:100%;max-width:480px;}
+.loading-line{
+  font-size:13px;color:var(--muted);font-weight:300;
+  letter-spacing:.02em;line-height:1.5;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .4s ease, transform .4s cubic-bezier(.22,1,.36,1);
+  display:flex;align-items:flex-start;gap:10px;
+}
+.loading-line.visible{opacity:1;transform:translateY(0);}
+.loading-line::before{content:'→';color:var(--text);flex-shrink:0;margin-top:1px;}
+.loading-pulse{
+  width:32px;height:2px;background:var(--text);
+  margin:40px auto 0;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.2;transform:scaleX(.6)}50%{opacity:1;transform:scaleX(1)}}
+
+/* SCROLLABLE OPTIONS */
+.options-scroll{max-height:55vh;overflow-y:auto;padding-right:4px;}
+.options-scroll::-webkit-scrollbar{width:2px;}
+.options-scroll::-webkit-scrollbar-track{background:transparent;}
+.options-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="quiz-nav">
+  <span class="nav-logo">FIRST MOVE</span>
+  <span class="nav-counter" id="nav-counter"></span>
+  <button class="nav-back" id="nav-back" onclick="goBack()" style="display:none">← Back</button>
+</nav>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progress-bar"></div>
+
+<!-- PLITT QUOTE -->
+<div class="plitt-quote" id="plitt-quote"></div>
+
+<!-- ENTRY SCREEN -->
+<div class="screen active" id="screen-entry">
+  <div class="entry-eyebrow">First Move — Quiz</div>
+  <div class="entry-title">BEFORE WE<br>BUILD YOUR<br>PLAN.</div>
+  <div class="entry-sub"><strong>23 questions. 5 minutes.</strong><br>Everything that follows is built on what you tell us here. The more honest you are, the more personal your plan.</div>
+  <button class="btn-start" onclick="startQuiz()">LET'S GO →</button>
+</div>
+
+<!-- REASSURANCE SCREEN -->
+<div class="reassurance-screen" id="reassurance-screen">
+  <div class="reassurance-line">Whatever you just picked —<br>we've built for it.</div>
+  <div class="reassurance-sub">First Move doesn't hand you a plan and disappear. Every module is calibrated to your exact fear, your specific blocker, your real situation. We'll teach what you need, strengthen what's already there, and walk every step with you. You won't be figuring this out alone.</div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-title">BUILDING<br>YOUR PLAN.</div>
+  <div class="loading-lines" id="loading-lines"></div>
+  <div class="loading-pulse"></div>
+</div>
+
+<!-- QUESTION SCREENS (generated by JS) -->
+<div id="question-screens"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const S0_WEBHOOK = 'https://hook.eu1.make.com/w78rzatx4o27ty0svuxkdb10ytt2vt8g';
+const S1_WEBHOOK = 'https://hook.eu1.make.com/b2jv61c24rvtzmh6lvs288tuiu75d405';
+const WORKER    = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+
+// ─── PLITT QUOTES PER SECTION ────────────────────────────────────────────────
+const PLITT_QUOTES = {
+  identity: "The body achieves what the mind believes — but only after you're honest about where you actually are.",
+  skills:   "You already have more than you think. The question is whether you're willing to use it.",
+  school:   "What you learn and what you earn don't have to live in separate worlds.",
+  situation:"Time is the one thing you can't buy back. Every hour you're not building, someone else is.",
+  community:"Your network is your net worth — and yours is bigger than you realise right now.",
+  blockers: "The cave you fear to enter holds the treasure you seek. Name the fear first.",
+  how:      "Discipline is not a gift. It's a decision made daily, before motivation shows up.",
+  vision:   "Don't count the days. Make the days count — toward something that's actually worth them."
+};
+
+// ─── QUESTIONS ───────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  // SECTION 1 — Who you are
+  {id:'name', section:'Who you are', type:'text', plitt:'identity',
+   q:"What's your first name?", placeholder:"Just your first name", example:null},
+  {id:'age', section:'Who you are', type:'number', plitt:'identity',
+   q:"How old are you?", placeholder:"Your age", example:null},
+  {id:'city', section:'Who you are', type:'text', plitt:'identity',
+   q:"Which city are you in?", placeholder:"Be specific — it matters",
+   example:"Bangalore, Pune, Chennai, Surat, a smaller town — wherever you actually are"},
+  {id:'email', section:'Who you are', type:'text', plitt:'identity',
+   q:"Where should we send your results?", placeholder:"your@email.com",
+   example:"We'll send your personalised skillcheck link here — check spam if you don't see it within a minute"},
+
+  // SECTION 2 — School
+  {id:'isStudent', section:'School and studies', type:'single', plitt:'school',
+   q:"Are you currently a student?",
+   options:['Yes','No']},
+  {id:'board', section:'School and studies', type:'single', plitt:'school',
+   q:"Which board are you studying under?",
+   options:['CBSE','ICSE','State board','IB','IGCSE','Other'],
+   conditional:{field:'isStudent', value:'Yes'}},
+  {id:'schoolGrade', section:'School and studies', type:'single', plitt:'school',
+   q:"Which grade are you in?",
+   options:['8th','9th','10th','11th','12th','First year college','Second year college+'],
+   conditional:{field:'isStudent', value:'Yes'}},
+  {id:'subjects', section:'School and studies', type:'multi', plitt:'school',
+   q:"Which subjects are you studying or genuinely interested in?",
+   example:"Pick everything that applies — even subjects you're just curious about",
+   options:['Mathematics','Sciences (Physics/Chemistry/Biology)','Commerce and Accountancy','Economics','Psychology','History and Political Science','English Literature','Computer Science','Physical Education','Arts and Design','Languages','Other'],
+   conditional:{field:'isStudent', value:'Yes'}},
+  {id:'schoolLink', section:'School and studies', type:'single', plitt:'school',
+   q:"Do you want your hustle to connect to what you're learning in school?",
+   options:[
+     "Yes — I want it to strengthen my subjects and extra-curriculars",
+     "Somewhat — open to it if it makes sense",
+     "No — school and hustle are completely separate for me"
+   ],
+   conditional:{field:'isStudent', value:'Yes'}},
+
+  // SECTION 3 — What you bring
+  {id:'skills', section:'What you bring', type:'multi', plitt:'skills',
+   q:"What do people already come to you for — even informally?",
+   example:"Pick everything that feels true — these become your starting edges",
+   options:['Explaining things clearly','Design and making things look good','Fitness or health knowledge','Cooking or nutrition','Writing or storytelling','Talking and convincing people','Social media and content','Tech and tools','Teaching or tutoring','Building systems and routines','Sales or negotiation','Photography or video']},
+  {id:'enjoysDoing', section:'What you bring', type:'text', plitt:'skills',
+   q:"What do you do for fun or on your own time?",
+   placeholder:"Don't filter it — just write what's true",
+   example:"MMA, cooking clean, learning about behavioral psychology, sprinting, gaming, reading about marketing"},
+
+  // SECTION 4 — Your situation
+  {id:'timeAvailable', section:'Your situation', type:'single', plitt:'situation',
+   q:"How much time can you realistically put into this per week?",
+   options:['3–5 hours','5–8 hours','8–12 hours','12–15 hours','15+ hours']},
+  {id:'earningGoal', section:'Your situation', type:'single', plitt:'situation',
+   q:"What's your earning goal per month once this is running?",
+   options:[
+     '₹3,000–5,000  (achievable in your first month with one client)',
+     '₹5,000–10,000  (realistic by month 2 with 2 clients)',
+     '₹10,000–20,000  (month 3 target — this is the sweet spot)',
+     '₹20,000–35,000  (ambitious — requires 3+ clients and a system)',
+     '₹35,000+  (possible but your hustle and workload will match this)'
+   ]},
+  {id:'moneyMotivation', section:'Your situation', type:'single', plitt:'situation',
+   q:"Why do you want to earn?",
+   options:['Save for something specific','Buy things without asking my parents','Reinvest and grow it into something bigger','Prove to myself that I can','Help my family']},
+  {id:'budget', section:'Your situation', type:'single', plitt:'situation',
+   q:"Do you have any budget to invest in your hustle right now?",
+   options:['Nothing right now','Up to ₹500','₹500–₹2,000','₹2,000–₹5,000','₹5,000+']},
+  {id:'deviceAccess', section:'Your situation', type:'multi', plitt:'situation',
+   q:"What devices do you have access to?",
+   options:['Smartphone','Laptop','Tablet','Good internet','None of these consistently']},
+  {id:'languages', section:'Your situation', type:'multi', plitt:'situation',
+   q:"What languages do you speak and feel confident using professionally?",
+   options:['English','Hindi','Tamil','Telugu','Kannada','Marathi','Malayalam','Bengali','Other']},
+  {id:'socialMedia', section:'Your situation', type:'single', plitt:'situation',
+   q:"How active are you on social media right now?",
+   options:['I post regularly and have a small audience','I scroll but rarely post','I have accounts but barely use them',"I'm not on social media"]},
+
+  // SECTION 5 — Your connections
+  {id:'communityAccess', section:'Your connections', type:'multi', plitt:'community',
+   q:"Do you have access to any community right now?",
+   example:"Pick everything — even small communities count",
+   options:['School club or team','Gym or fitness class','Coaching or tuition centre','Apartment complex or neighbourhood group','Religious or cultural group','Online community or group chat','None of these right now']},
+  {id:'warmConnectionType', section:'Your connections', type:'single', plitt:'community',
+   q:"Do you have a warm connection who could be your first client or introduce you to one?",
+   options:['Yes — family member','Yes — friend or peer','Yes — teacher, coach or mentor','Yes — neighbour or community member',"No I'm starting from zero"]},
+  {id:'warmConnectionDetail', section:'Your connections', type:'text', plitt:'community',
+   q:"Describe them in one sentence.",
+   placeholder:"Who are they and what do they do?",
+   example:'"My uncle runs a gym in Koramangala" or "My friend\'s mum owns a bakery that needs Instagram help"',
+   conditional:{field:'warmConnectionType', value:"No I'm starting from zero", negate:true}},
+  {id:'whatTheyHave', section:'Your connections', type:'multi', plitt:'community',
+   q:"What do you already have that most teens your age don't?",
+   example:"Be honest — this shapes your starting advantage",
+   options:['A skill I\'m already known for','A community or audience even if small','A connection to a potential client','Equipment or tools (camera, laptop, kitchen setup)','A previous attempt I learned from','Honestly nothing yet — starting completely fresh']},
+
+  // SECTION 6 — Blockers and fears
+  {id:'primaryBlocker', section:'Your blockers', type:'single', plitt:'blockers',
+   q:"What's the one thing that always stops you from starting something?",
+   options:['Fear of tech and not knowing how to use tools','Fear of talking to strangers or approaching people','Losing consistency after the first week','Not knowing if my idea is good enough yet','Fear of what people will think of me','I usually start things — execution is not my problem']},
+  {id:'clientFear', section:'Your blockers', type:'single', plitt:'blockers',
+   q:"What's your biggest fear about getting your first client?",
+   options:["They'll think I'm too young to take seriously","I won't know what to do once they say yes","I'll mess up and damage my reputation","I'll get a client and then panic about delivering"],
+   showReassurance: true},
+  {id:'previousAttempts', section:'Your blockers', type:'single', plitt:'blockers',
+   q:"Have you tried starting a hustle or making money before?",
+   options:['Never tried anything','Tried but stopped within 2 weeks','Tried for a while but hit a wall','Currently doing something small']},
+  {id:'previousAttemptDetail', section:'Your blockers', type:'text', plitt:'blockers',
+   q:"What stopped you or slowed you down?",
+   placeholder:"Be honest — one sentence is enough",
+   example:'"Nobody was buying" or "I ran out of ideas" or "School got too busy"',
+   conditional:{field:'previousAttempts', value:'Never tried anything', negate:true}},
+
+  // SECTION 7 — How you work
+  {id:'learningStyle', section:'How you work', type:'single', plitt:'how',
+   q:"How do you learn best?",
+   options:['Watching videos and seeing it done','Reading and understanding the logic','Just doing it and figuring it out','Someone explaining it to me step by step']},
+  {id:'disciplineLevel', section:'How you work', type:'single', plitt:'how',
+   q:"What's your honest relationship with discipline right now?",
+   options:["I'm already disciplined and consistent","I want to be but I'm not quite there yet","I struggle badly and need a lot of structure to stay on track"]},
+  {id:'comfortLevel', section:'How you work', type:'single', plitt:'how',
+   q:"How would you describe your overall comfort with starting a business?",
+   options:[
+     "I've never done anything like this and I need everything explained  →  BEGINNER",
+     "I've tried something before or understand the basics  →  INTERMEDIATE",
+     "I've had clients or made money independently  →  ADVANCED"
+   ]},
+  {id:'winningVision', section:'How you work', type:'text', plitt:'vision',
+   q:"What does winning look like to you in 6 months?",
+   placeholder:"One honest sentence",
+   example:'"Having 3 paying clients and ₹15K a month" or "Building something that runs without me" or "Just proving to myself I can actually do this"'},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let answers = {};
+let currentQ = -1; // -1 = entry screen
+let qHistory = [];  // stack of visited question indices
+let activeQuestions = []; // filtered based on conditionals
+
+// ─── BUILD QUESTIONS ─────────────────────────────────────────────────────────
+function buildQuestions(){
+  const container = document.getElementById('question-screens');
+  QUESTIONS.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'screen';
+    div.id = `qscreen-${i}`;
+    div.innerHTML = buildQuestionHTML(q, i);
+    container.appendChild(div);
+  });
+}
+
+function buildQuestionHTML(q, i){
+  let html = `<div class="q-section-label">${q.section}</div>`;
+  html += `<div class="q-text">${q.q}</div>`;
+  if(q.example) html += `<div class="q-example">${q.example}</div>`;
+
+  if(q.type === 'text' || q.type === 'number'){
+    html += `<input class="q-input" id="input-${i}" type="${q.type === 'number' ? 'number' : 'text'}"
+      placeholder="${q.placeholder||''}" autocomplete="off" autocorrect="off" spellcheck="false"
+      oninput="onTextInput(${i})" onkeydown="onTextKey(event,${i})">`;
+    html += `<button class="btn-continue" id="cont-${i}" onclick="advanceFromText(${i})">CONTINUE →</button>`;
+  } else {
+    const isMulti = q.type === 'multi';
+    html += `<div class="options${isMulti?' multi':''} options-scroll" id="opts-${i}">`;
+    q.options.forEach((opt, j) => {
+      html += `<div class="opt" id="opt-${i}-${j}" onclick="selectOpt(${i},${j},${isMulti},'${escOpt(opt)}')">
+        <div class="opt-check"></div>
+        <span>${opt}</span>
+      </div>`;
+    });
+    html += `</div>`;
+    if(isMulti){
+      html += `<button class="btn-continue" id="cont-${i}" onclick="advanceFromMulti(${i})">CONTINUE →</button>`;
+    }
+  }
+  return html;
+}
+
+function escOpt(s){ return s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function startQuiz(){
+  buildQuestions();
+  updateActiveQuestions();
+  showQuestion(0);
+}
+
+function updateActiveQuestions(){
+  activeQuestions = QUESTIONS.reduce((acc, q, i) => {
+    if(!q.conditional) { acc.push(i); return acc; }
+    const {field, value, negate} = q.conditional;
+    const ans = answers[field] || '';
+    const match = Array.isArray(ans) ? ans.includes(value) : ans === value;
+    if(negate ? !match : match) acc.push(i);
+    return acc;
+  }, []);
+}
+
+function showQuestion(qIdx){
+  // Exit current
+  if(currentQ === -1){
+    document.getElementById('screen-entry').classList.remove('active');
+    document.getElementById('screen-entry').classList.add('exit');
+    setTimeout(()=>document.getElementById('screen-entry').classList.remove('exit'),400);
+  } else if(currentQ >= 0){
+    const prev = document.getElementById(`qscreen-${currentQ}`);
+    if(prev){ prev.classList.remove('active'); prev.classList.add('exit');
+      setTimeout(()=>prev.classList.remove('exit'),400); }
+  }
+
+  currentQ = qIdx;
+  const el = document.getElementById(`qscreen-${qIdx}`);
+  if(el){ setTimeout(()=>el.classList.add('active'),50); }
+
+  updateNav(qIdx);
+  updatePlitt(qIdx);
+  updateProgress(qIdx);
+
+  // Focus text input
+  const inp = document.getElementById(`input-${qIdx}`);
+  if(inp) setTimeout(()=>inp.focus(),400);
+}
+
+function advance(fromIdx){
+  updateActiveQuestions();
+  const pos = activeQuestions.indexOf(fromIdx);
+  if(pos === -1 || pos >= activeQuestions.length - 1){
+    submitQuiz(); return;
+  }
+  qHistory.push(fromIdx);
+  const next = activeQuestions[pos + 1];
+
+  // Check if we need reassurance screen before continuing
+  if(QUESTIONS[fromIdx].showReassurance){
+    showReassurance(()=>showQuestion(next));
+  } else {
+    showQuestion(next);
+  }
+}
+
+function goBack(){
+  if(qHistory.length === 0) return;
+  const prev = qHistory.pop();
+  const curr = document.getElementById(`qscreen-${currentQ}`);
+  if(curr){ curr.classList.remove('active'); }
+  currentQ = prev;
+  const el = document.getElementById(`qscreen-${prev}`);
+  if(el){
+    // Reverse animation
+    el.style.transform = 'translateX(-60px)';
+    el.classList.add('active');
+    setTimeout(()=>el.style.transform = '',50);
+  }
+  updateNav(prev);
+  updatePlitt(prev);
+  updateProgress(prev);
+}
+
+// ─── INPUT HANDLERS ───────────────────────────────────────────────────────────
+function onTextInput(idx){
+  const inp = document.getElementById(`input-${idx}`);
+  const cont = document.getElementById(`cont-${idx}`);
+  const q = QUESTIONS[idx];
+  const val = inp ? inp.value.trim() : '';
+  answers[q.id] = val;
+  if(cont){
+    if(val.length > 0) cont.classList.add('visible');
+    else cont.classList.remove('visible');
+  }
+}
+
+function onTextKey(e, idx){
+  if(e.key === 'Enter') advanceFromText(idx);
+}
+
+function advanceFromText(idx){
+  const inp = document.getElementById(`input-${idx}`);
+  if(inp && inp.value.trim().length > 0){
+    answers[QUESTIONS[idx].id] = inp.value.trim();
+    advance(idx);
+  }
+}
+
+function selectOpt(qIdx, optIdx, isMulti, value){
+  const q = QUESTIONS[qIdx];
+  const el = document.getElementById(`opt-${qIdx}-${optIdx}`);
+
+  if(isMulti){
+    if(!Array.isArray(answers[q.id])) answers[q.id] = [];
+    el.classList.toggle('selected');
+    if(el.classList.contains('selected')){
+      answers[q.id].push(value);
+    } else {
+      answers[q.id] = answers[q.id].filter(v=>v!==value);
+    }
+    const cont = document.getElementById(`cont-${qIdx}`);
+    if(cont){
+      if(answers[q.id].length > 0) cont.classList.add('visible');
+      else cont.classList.remove('visible');
+    }
+  } else {
+    // Deselect all
+    q.options.forEach((_,j)=>{
+      const o = document.getElementById(`opt-${qIdx}-${j}`);
+      if(o) o.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    answers[q.id] = value;
+    // Auto-advance after short delay
+    setTimeout(()=>advance(qIdx), 420);
+  }
+}
+
+function advanceFromMulti(idx){
+  const q = QUESTIONS[idx];
+  if(answers[q.id] && answers[q.id].length > 0) advance(idx);
+}
+
+// ─── REASSURANCE ─────────────────────────────────────────────────────────────
+function showReassurance(onDone){
+  const rs = document.getElementById('reassurance-screen');
+  rs.classList.add('active');
+  setTimeout(()=>{
+    rs.classList.remove('active');
+    setTimeout(onDone, 400);
+  }, 3200);
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function updateNav(qIdx){
+  const counter = document.getElementById('nav-counter');
+  const back = document.getElementById('nav-back');
+  const pos = activeQuestions.indexOf(qIdx);
+  counter.textContent = `${String(pos+1).padStart(2,'0')} / ${String(activeQuestions.length).padStart(2,'0')}`;
+  back.style.display = qHistory.length > 0 ? 'block' : 'none';
+}
+
+function updateProgress(qIdx){
+  const pos = activeQuestions.indexOf(qIdx);
+  const pct = activeQuestions.length > 1 ? ((pos) / (activeQuestions.length - 1)) * 100 : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function updatePlitt(qIdx){
+  const q = QUESTIONS[qIdx];
+  const quote = PLITT_QUOTES[q.plitt] || '';
+  const el = document.getElementById('plitt-quote');
+  el.style.opacity = '0';
+  setTimeout(()=>{ el.textContent = `"${quote}"`; el.style.opacity='1'; }, 300);
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+async function submitQuiz(){
+  // Show loading screen
+  const ls = document.getElementById('loading-screen');
+  ls.classList.add('active');
+
+  // Build personalised loading lines
+  buildLoadingLines();
+
+  // Animate loading lines
+  const lines = document.querySelectorAll('.loading-line');
+  lines.forEach((l,i)=>setTimeout(()=>l.classList.add('visible'), i*600));
+
+  // Map comfort level
+  let comfort = answers.comfortLevel || '';
+  if(comfort.includes('BEGINNER')) comfort = 'BEGINNER';
+  else if(comfort.includes('INTERMEDIATE')) comfort = 'INTERMEDIATE';
+  else if(comfort.includes('ADVANCED')) comfort = 'ADVANCED';
+
+  // Map earning goal to clean number
+  let earningGoal = answers.earningGoal || '';
+  const egMatch = earningGoal.match(/₹[\d,]+–?([\d,]+)?/);
+  if(egMatch) earningGoal = egMatch[0].split('  ')[0];
+
+  const payload = {
+    name:                 answers.name || '',
+    age:                  answers.age || '',
+    city:                 answers.city || '',
+    email:                answers.email || '',
+    skills:               Array.isArray(answers.skills) ? answers.skills.join(', ') : '',
+    enjoysDoing:          answers.enjoysDoing || '',
+    timeAvailable:        answers.timeAvailable || '',
+    earningGoal:          earningGoal,
+    moneyMotivation:      answers.moneyMotivation || '',
+    budget:               answers.budget || '',
+    deviceAccess:         Array.isArray(answers.deviceAccess) ? answers.deviceAccess.join(', ') : '',
+    languages:            Array.isArray(answers.languages) ? answers.languages.join(', ') : '',
+    socialMedia:          answers.socialMedia || '',
+    isStudent:            answers.isStudent || '',
+    board:                answers.board || '',
+    schoolGrade:          answers.schoolGrade || '',
+    subjects:             Array.isArray(answers.subjects) ? answers.subjects.join(', ') : '',
+    schoolLink:           answers.schoolLink || '',
+    communityAccess:      Array.isArray(answers.communityAccess) ? answers.communityAccess.join(', ') : '',
+    warmConnectionType:   answers.warmConnectionType || '',
+    warmConnectionDetail: answers.warmConnectionDetail || '',
+    whatTheyHave:         Array.isArray(answers.whatTheyHave) ? answers.whatTheyHave.join(', ') : '',
+    primaryBlocker:       answers.primaryBlocker || '',
+    clientFear:           answers.clientFear || '',
+    previousAttempts:     answers.previousAttempts || '',
+    previousAttemptDetail:answers.previousAttemptDetail || '',
+    learningStyle:        answers.learningStyle || '',
+    disciplineLevel:      answers.disciplineLevel || '',
+    comfortLevel:         comfort,
+    winningVision:        answers.winningVision || '',
+    moneyToStart:         (answers.budget && answers.budget !== 'Nothing right now') ? 'Yes' : 'No',
+  };
+
+  try {
+    // Fire S0 — create Airtable record
+    const res = await fetch(S0_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const recordId = data.recordId || data.id || '';
+
+    if(recordId){
+      // Fire S1 — generate skillcheck questions
+      fetch(S1_WEBHOOK, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          recordId,
+          name: payload.name,
+          email: payload.email,
+          skillArea: payload.skills,
+          enjoysDoing: payload.enjoysDoing,
+          communityAccess: payload.communityAccess,
+          clientFear: payload.clientFear,
+          primaryBlocker: payload.primaryBlocker,
+          subjects: payload.subjects,
+          schoolLink: payload.schoolLink,
+          city: payload.city,
+          age: payload.age,
+          comfortLevel: comfort
+        })
+      }).catch(()=>{});
+
+      // Wait for loading lines then redirect
+      setTimeout(()=>{
+        window.location.href = `skillcheck.html?id=${recordId}&name=${encodeURIComponent(payload.name)}`;
+      }, lines.length * 600 + 1200);
+    } else {
+      // Fallback — no record ID
+      setTimeout(()=>{
+        window.location.href = `skillcheck.html?name=${encodeURIComponent(payload.name)}`;
+      }, 3000);
+    }
+  } catch(e){
+    console.error('Submit error:', e);
+    setTimeout(()=>{
+      window.location.href = `skillcheck.html?name=${encodeURIComponent(answers.name||'')}`;
+    }, 3000);
+  }
+}
+
+function buildLoadingLines(){
+  const container = document.getElementById('loading-lines');
+  const lines = [];
+
+  const name = answers.name || 'you';
+  const warmDetail = answers.warmConnectionDetail;
+  const fear = answers.clientFear || '';
+  const blocker = answers.primaryBlocker || '';
+  const enjoys = answers.enjoysDoing || '';
+  const discipline = answers.disciplineLevel || '';
+  const grade = answers.schoolGrade || '';
+  const isStudent = answers.isStudent === 'Yes';
+  const community = Array.isArray(answers.communityAccess) ? answers.communityAccess.filter(c=>c!=='None of these right now') : [];
+
+  if(warmDetail) lines.push(`Your warm connection — ${warmDetail.substring(0,50)}${warmDetail.length>50?'...':''} — locked as module 3 target`);
+  if(fear.includes('young')) lines.push(`Fear of being judged for your age → pre-empted in every dark day module`);
+  else if(fear.includes('won\'t know')) lines.push(`Fear of not knowing what to do → extra scaffolding built into delivery modules`);
+  else if(fear.includes('mess up')) lines.push(`Fear of damaging your reputation → client communication modules reinforced`);
+  else if(fear.includes('panic')) lines.push(`Fear of panicking after landing a client → onboarding system built early`);
+  if(enjoys.length > 0) lines.push(`Your interests (${enjoys.substring(0,40)}${enjoys.length>40?'...':''}) → woven into every example and analogy`);
+  if(community.length > 0) lines.push(`Your ${community[0].toLowerCase()} → first warm outreach target identified`);
+  if(isStudent && grade) lines.push(`${grade} student → module pacing and board exam pressure calibrated`);
+  if(discipline.includes('struggle')) lines.push(`Discipline level → extra accountability structures added throughout`);
+  if(blocker.includes('talking')) lines.push(`Fear of approaching people → cold outreach modules built with smaller first steps`);
+
+  // Always add these
+  lines.push(`23 data points collected → your plan is unlike anyone else's`);
+
+  lines.slice(0,6).forEach(text=>{
+    const div = document.createElement('div');
+    div.className = 'loading-line';
+    div.textContent = text;
+    container.appendChild(div);
+  });
+}
+</script>
+</body>
+</html>
