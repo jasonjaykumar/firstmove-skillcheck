@@ -135,6 +135,17 @@ body::before{
 .q-input:focus{border-color:var(--text);}
 .q-input::placeholder{color:var(--muted);}
 
+/* TEXTAREA */
+.q-textarea{
+  width:100%;max-width:560px;align-self:flex-start;
+  background:transparent;border:1.5px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:300;
+  padding:14px 16px;outline:none;resize:none;min-height:100px;
+  transition:border-color .2s;caret-color:var(--text);line-height:1.6;
+}
+.q-textarea:focus{border-color:var(--text);}
+.q-textarea::placeholder{color:var(--muted);}
+
 /* CONTINUE BUTTON */
 .btn-continue{
   margin-top:24px;align-self:flex-start;
@@ -243,7 +254,7 @@ body::before{
 <div class="screen active" id="screen-entry">
   <div class="entry-eyebrow">First Move — Quiz</div>
   <div class="entry-title">BEFORE WE<br>BUILD YOUR<br>PLAN.</div>
-  <div class="entry-sub"><strong>23 questions. 5 minutes.</strong><br>Everything that follows is built on what you tell us here. The more honest you are, the more personal your plan.</div>
+  <div class="entry-sub"><strong>25 questions. 5 minutes.</strong><br>Everything that follows is built on what you tell us here. The more honest you are, the more personal your plan.</div>
   <button class="btn-start" onclick="startQuiz()">LET'S GO →</button>
 </div>
 
@@ -301,8 +312,16 @@ const QUESTIONS = [
    options:['Yes','No']},
   {id:'board', section:'School and studies', type:'single', plitt:'school',
    q:"Which board are you studying under?",
-   options:['CBSE','ICSE','State board','IB','IGCSE','Other'],
+   options:['CBSE','ICSE / ISC','IGCSE / A Levels','State board','IB','Other'],
    conditional:{field:'isStudent', value:'Yes'}},
+  {id:'boardLevel', section:'School and studies', type:'single', plitt:'school',
+   q:"Which level are you at?",
+   options:['ICSE (Class 9–10)','ISC (Class 11–12)'],
+   conditional:{field:'board', value:'ICSE / ISC'}},
+  {id:'igcseLevel', section:'School and studies', type:'single', plitt:'school',
+   q:"Which level are you at?",
+   options:['IGCSE (O Level / Class 9–10)','AS Level (Class 11)','A Level (Class 12)'],
+   conditional:{field:'board', value:'IGCSE / A Levels'}},
   {id:'schoolGrade', section:'School and studies', type:'single', plitt:'school',
    q:"Which grade are you in?",
    options:['8th','9th','10th','11th','12th','First year college','Second year college+'],
@@ -326,7 +345,7 @@ const QUESTIONS = [
    q:"What do people already come to you for — even informally?",
    example:"Pick everything that feels true — these become your starting edges",
    options:['Explaining things clearly','Design and making things look good','Fitness or health knowledge','Cooking or nutrition','Writing or storytelling','Talking and convincing people','Social media and content','Tech and tools','Teaching or tutoring','Building systems and routines','Sales or negotiation','Photography or video']},
-  {id:'enjoysDoing', section:'What you bring', type:'text', plitt:'skills',
+  {id:'enjoysDoing', section:'What you bring', type:'textarea', plitt:'skills',
    q:"What do you do for fun or on your own time?",
    placeholder:"Don't filter it — just write what's true",
    example:"MMA, cooking clean, learning about behavioral psychology, sprinting, gaming, reading about marketing"},
@@ -360,44 +379,36 @@ const QUESTIONS = [
    q:"How active are you on social media right now?",
    options:['I post regularly and have a small audience','I scroll but rarely post','I have accounts but barely use them',"I'm not on social media"]},
 
-  // SECTION 5 — Your connections
+  // SECTION 5 — Your connections (warm connection removed — moved to recommendations.html)
   {id:'communityAccess', section:'Your connections', type:'multi', plitt:'community',
    q:"Do you have access to any community right now?",
    example:"Pick everything — even small communities count",
    options:['School club or team','Gym or fitness class','Coaching or tuition centre','Apartment complex or neighbourhood group','Religious or cultural group','Online community or group chat','None of these right now']},
-  {id:'warmConnectionType', section:'Your connections', type:'single', plitt:'community',
-   q:"Do you have a warm connection who could be your first client or introduce you to one?",
-   options:['Yes — family member','Yes — friend or peer','Yes — teacher, coach or mentor','Yes — neighbour or community member',"No I'm starting from zero"]},
-  {id:'warmConnectionDetail', section:'Your connections', type:'text', plitt:'community',
-   q:"Describe them in one sentence.",
-   placeholder:"Who are they and what do they do?",
-   example:'"My uncle runs a gym in Koramangala" or "My friend\'s mum owns a bakery that needs Instagram help"',
-   conditional:{field:'warmConnectionType', value:"No I'm starting from zero", negate:true}},
   {id:'whatTheyHave', section:'Your connections', type:'multi', plitt:'community',
    q:"What do you already have that most teens your age don't?",
    example:"Be honest — this shapes your starting advantage",
-   options:['A skill I\'m already known for','A community or audience even if small','A connection to a potential client','Equipment or tools (camera, laptop, kitchen setup)','A previous attempt I learned from','Honestly nothing yet — starting completely fresh']},
+   options:["A skill I'm already known for","A community or audience even if small","A connection to a potential client","Equipment or tools (camera, laptop, kitchen setup)","A previous attempt I learned from","Honestly nothing yet — starting completely fresh"]},
 
   // SECTION 6 — Blockers and fears
-  {id:'primaryBlocker', section:'Your blockers', type:'single', plitt:'blockers',
-   q:"What's the one thing that always stops you from starting something?",
+  {id:'primaryBlocker', section:'Your blockers', type:'multi', plitt:'blockers',
+   q:"What stops you from starting something? Pick everything that's true.",
    options:['Fear of tech and not knowing how to use tools','Fear of talking to strangers or approaching people','Losing consistency after the first week','Not knowing if my idea is good enough yet','Fear of what people will think of me','I usually start things — execution is not my problem']},
-  {id:'clientFear', section:'Your blockers', type:'single', plitt:'blockers',
-   q:"What's your biggest fear about getting your first client?",
+  {id:'clientFear', section:'Your blockers', type:'multi', plitt:'blockers',
+   q:"What are your biggest fears about getting your first client? Pick all that apply.",
    options:["They'll think I'm too young to take seriously","I won't know what to do once they say yes","I'll mess up and damage my reputation","I'll get a client and then panic about delivering"],
    showReassurance: true},
   {id:'previousAttempts', section:'Your blockers', type:'single', plitt:'blockers',
    q:"Have you tried starting a hustle or making money before?",
    options:['Never tried anything','Tried but stopped within 2 weeks','Tried for a while but hit a wall','Currently doing something small']},
-  {id:'previousAttemptDetail', section:'Your blockers', type:'text', plitt:'blockers',
+  {id:'previousAttemptDetail', section:'Your blockers', type:'textarea', plitt:'blockers',
    q:"What stopped you or slowed you down?",
    placeholder:"Be honest — one sentence is enough",
    example:'"Nobody was buying" or "I ran out of ideas" or "School got too busy"',
    conditional:{field:'previousAttempts', value:'Never tried anything', negate:true}},
 
   // SECTION 7 — How you work
-  {id:'learningStyle', section:'How you work', type:'single', plitt:'how',
-   q:"How do you learn best?",
+  {id:'learningStyle', section:'How you work', type:'multi', plitt:'how',
+   q:"How do you learn best? Pick everything that applies.",
    options:['Watching videos and seeing it done','Reading and understanding the logic','Just doing it and figuring it out','Someone explaining it to me step by step']},
   {id:'disciplineLevel', section:'How you work', type:'single', plitt:'how',
    q:"What's your honest relationship with discipline right now?",
@@ -409,9 +420,18 @@ const QUESTIONS = [
      "I've tried something before or understand the basics  →  INTERMEDIATE",
      "I've had clients or made money independently  →  ADVANCED"
    ]},
-  {id:'winningVision', section:'How you work', type:'text', plitt:'vision',
+  {id:'aiIntegration', section:'How you work', type:'single', plitt:'how',
+   q:"How much do you want AI involved in your hustle?",
+   example:"There's no wrong answer — more AI = more powerful but also more to learn. We'll walk you through every level either way.",
+   options:[
+     "Minimal — I want to do the work myself, AI is just a spell checker",
+     "Moderate — I'll use AI to speed up writing, research and communication  (saves 2–3 hrs/week)",
+     "Heavy — AI handles content, outreach, delivery and follow-up  (saves 8–10 hrs/week)",
+     "Full automation — I want systems that run without me touching them  (Phase 4 territory — harder but we'll take you there step by step)"
+   ]},
+  {id:'winningVision', section:'How you work', type:'textarea', plitt:'vision',
    q:"What does winning look like to you in 6 months?",
-   placeholder:"One honest sentence",
+   placeholder:"One honest sentence — or a few",
    example:'"Having 3 paying clients and ₹15K a month" or "Building something that runs without me" or "Just proving to myself I can actually do this"'},
 ];
 
@@ -438,7 +458,12 @@ function buildQuestionHTML(q, i){
   html += `<div class="q-text">${q.q}</div>`;
   if(q.example) html += `<div class="q-example">${q.example}</div>`;
 
-  if(q.type === 'text' || q.type === 'number'){
+  if(q.type === 'textarea'){
+    html += `<textarea class="q-textarea" id="input-${i}"
+      placeholder="${q.placeholder||''}" rows="4"
+      oninput="onTextInput(${i})"></textarea>`;
+    html += `<button class="btn-continue" id="cont-${i}" onclick="advanceFromText(${i})">CONTINUE →</button>`;
+  } else if(q.type === 'text' || q.type === 'number'){
     html += `<input class="q-input" id="input-${i}" type="${q.type === 'number' ? 'number' : 'text'}"
       placeholder="${q.placeholder||''}" autocomplete="off" autocorrect="off" spellcheck="false"
       oninput="onTextInput(${i})" onkeydown="onTextKey(event,${i})">`;
@@ -603,11 +628,21 @@ function advanceFromMulti(idx){
 // ─── REASSURANCE ─────────────────────────────────────────────────────────────
 function showReassurance(onDone){
   const rs = document.getElementById('reassurance-screen');
+  rs._onDone = onDone;
   rs.classList.add('active');
-  setTimeout(()=>{
-    rs.classList.remove('active');
-    setTimeout(onDone, 400);
-  }, 3200);
+  // Click anywhere to dismiss
+  rs.onclick = ()=>{ dismissReassurance(rs); };
+  // Auto dismiss at 4s
+  rs._timer = setTimeout(()=>dismissReassurance(rs), 4000);
+}
+
+function dismissReassurance(rs){
+  if(rs._timer){ clearTimeout(rs._timer); rs._timer = null; }
+  rs.onclick = null;
+  rs.classList.remove('active');
+  const cb = rs._onDone;
+  rs._onDone = null;
+  setTimeout(()=>{ if(cb) cb(); }, 400);
 }
 
 // ─── UI HELPERS ───────────────────────────────────────────────────────────────
@@ -680,13 +715,14 @@ async function submitQuiz(){
     warmConnectionType:   answers.warmConnectionType || '',
     warmConnectionDetail: answers.warmConnectionDetail || '',
     whatTheyHave:         Array.isArray(answers.whatTheyHave) ? answers.whatTheyHave.join(', ') : '',
-    primaryBlocker:       answers.primaryBlocker || '',
-    clientFear:           answers.clientFear || '',
+    primaryBlocker:       Array.isArray(answers.primaryBlocker) ? answers.primaryBlocker.join(', ') : (answers.primaryBlocker || ''),
+    clientFear:           Array.isArray(answers.clientFear) ? answers.clientFear.join(', ') : (answers.clientFear || ''),
     previousAttempts:     answers.previousAttempts || '',
     previousAttemptDetail:answers.previousAttemptDetail || '',
-    learningStyle:        answers.learningStyle || '',
+    learningStyle:        Array.isArray(answers.learningStyle) ? answers.learningStyle.join(', ') : (answers.learningStyle || ''),
     disciplineLevel:      answers.disciplineLevel || '',
     comfortLevel:         comfort,
+    aiIntegration:        answers.aiIntegration || '',
     winningVision:        answers.winningVision || '',
     moneyToStart:         (answers.budget && answers.budget !== 'Nothing right now') ? 'Yes' : 'No',
   };
