@@ -632,8 +632,8 @@ function showReassurance(onDone){
   rs.classList.add('active');
   // Click anywhere to dismiss
   rs.onclick = ()=>{ dismissReassurance(rs); };
-  // Auto dismiss at 4s
-  rs._timer = setTimeout(()=>dismissReassurance(rs), 4000);
+  // Auto dismiss at 7s
+  rs._timer = setTimeout(()=>dismissReassurance(rs), 7000);
 }
 
 function dismissReassurance(rs){
@@ -735,7 +735,7 @@ async function submitQuiz(){
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    const recordId = data.recordId || data.id || '';
+    const recordId = data.recordId || data.id || (data.record && data.record.id) || '';
 
     if(recordId){
       // Fire S1 — generate skillcheck questions
