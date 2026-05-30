@@ -759,20 +759,20 @@ async function submitQuiz(){
         })
       }).catch(()=>{});
 
-      // Wait for loading lines then redirect
+      // Wait for loading lines then redirect to quiz-done
       setTimeout(()=>{
-        window.location.href = `skillcheck.html?id=${recordId}&name=${encodeURIComponent(payload.name)}`;
+        window.location.href = `quiz-done.html?email=${encodeURIComponent(payload.email)}&name=${encodeURIComponent(payload.name)}`;
       }, lines.length * 600 + 1200);
     } else {
       // Fallback — no record ID
       setTimeout(()=>{
-        window.location.href = `skillcheck.html?name=${encodeURIComponent(payload.name)}`;
+        window.location.href = `quiz-done.html?name=${encodeURIComponent(payload.name)}`;
       }, 3000);
     }
   } catch(e){
     console.error('Submit error:', e);
     setTimeout(()=>{
-      window.location.href = `skillcheck.html?name=${encodeURIComponent(answers.name||'')}`;
+      window.location.href = `quiz-done.html?name=${encodeURIComponent(answers.name||'')}`;
     }, 3000);
   }
 }
