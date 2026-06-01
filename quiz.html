@@ -276,8 +276,8 @@ body::before{
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const S0_WEBHOOK = 'https://hook.eu1.make.com/w78rzatx4o27ty0svuxkdb10ytt2vt8g';
-const S1_WEBHOOK = 'https://hook.eu1.make.com/b2jv61c24rvtzmh6lvs288tuiu75d405';
+const S0_WEBHOOK = 'https://hook.eu1.make.com/b2jv61c24rvtzmh6lvs288tuiu75d405';
+const S1_WEBHOOK = '';
 const WORKER    = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 
 // ─── PLITT QUOTES PER SECTION ────────────────────────────────────────────────
@@ -738,27 +738,7 @@ async function submitQuiz(){
     const recordId = data.recordId || data.id || (data.record && data.record.id) || '';
 
     if(recordId){
-      // Fire S1 — generate skillcheck questions
-      fetch(S1_WEBHOOK, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          recordId,
-          name: payload.name,
-          email: payload.email,
-          skillArea: payload.skills,
-          enjoysDoing: payload.enjoysDoing,
-          communityAccess: payload.communityAccess,
-          clientFear: payload.clientFear,
-          primaryBlocker: payload.primaryBlocker,
-          subjects: payload.subjects,
-          schoolLink: payload.schoolLink,
-          city: payload.city,
-          age: payload.age,
-          comfortLevel: comfort
-        })
-      }).catch(()=>{});
-
+      // S1 now handles everything internally — no separate call needed
       // Wait for loading lines then redirect to quiz-done
       setTimeout(()=>{
         window.location.href = `quiz-done.html?email=${encodeURIComponent(payload.email)}&name=${encodeURIComponent(payload.name)}`;
