@@ -376,7 +376,7 @@ body::before{
 <div id="header">
   <div class="header-row">
     <span class="logo">First Move</span>
-    <span class="question-counter" id="q-counter">Question 1 of 6</span>
+    <span class="question-counter" id="q-counter">Question 1 of 12</span>
   </div>
   <div class="progress-track">
     <div class="progress-fill" id="progress-fill"></div>
@@ -419,7 +419,14 @@ let pollCount  = 0;
 // PARSE QUESTIONS FROM AIRTABLE
 // ══════════════════════════════════════════
 function parseQuestions(raw){
-  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  // Normalize — insert newlines before Q, A), B), C), Correct:
+  const normalized = raw
+    .replace(/\s+(Q\d+:)/g, '\n$1')
+    .replace(/\s+(A\))/g, '\nA)')
+    .replace(/\s+(B\))/g, '\nB)')
+    .replace(/\s+(C\))/g, '\nC)')
+    .replace(/\s+(Correct:)/g, '\nCorrect:');
+  const lines = normalized.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
   const questions = [];
   let current = null;
 
@@ -445,12 +452,20 @@ function parseQuestions(raw){
 
 function pollQuestions(){
   if(!recordId){ loadFallbackQuestions(); return; }
-  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}&bust=1`)
     .then(r=>r.json())
     .then(data=>{
       const fields = data.fields || data;
-      const raw    = fields['Skill Check Questions'] || fields['skill_check_questions'] || '';
-      const area   = fields['skillArea'] || fields['Skills'] || 'Your Skills';
+      // Try multiple field name variants
+      const raw = fields['Skill Check Questions']
+               || fields['SkillCheckQuestions']
+               || fields['skill_check_questions']
+               || fields['Skill Check Questions ']
+               || '';
+      const area = fields['Skills Multi']
+                || fields['Skill Area']
+                || fields['skillArea']
+                || 'Your Skills';
       if(raw && raw.trim().length > 50){
         const parsed = parseQuestions(raw);
         if(parsed.length >= 3){
