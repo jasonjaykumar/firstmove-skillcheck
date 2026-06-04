@@ -632,8 +632,8 @@ function showReassurance(onDone){
   rs.classList.add('active');
   // Click anywhere to dismiss
   rs.onclick = ()=>{ dismissReassurance(rs); };
-  // Auto dismiss at 7s
-  rs._timer = setTimeout(()=>dismissReassurance(rs), 7000);
+  // Auto dismiss at 10s
+  rs._timer = setTimeout(()=>dismissReassurance(rs), 10000);
 }
 
 function dismissReassurance(rs){
@@ -692,13 +692,16 @@ async function submitQuiz(){
   const egMatch = earningGoal.match(/₹[\d,]+–?([\d,]+)?/);
   if(egMatch) earningGoal = egMatch[0].split('  ')[0];
 
+  // Clean textarea fields — strip newlines that break JSON
+  const clean = (s) => (s||'').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim();
+
   const payload = {
-    name:                 answers.name || '',
+    name:                 clean(answers.name),
     age:                  answers.age || '',
-    city:                 answers.city || '',
-    email:                answers.email || '',
+    city:                 clean(answers.city),
+    email:                clean(answers.email),
     skills:               Array.isArray(answers.skills) ? answers.skills.join(', ') : '',
-    enjoysDoing:          answers.enjoysDoing || '',
+    enjoysDoing:          clean(answers.enjoysDoing),
     timeAvailable:        answers.timeAvailable || '',
     earningGoal:          earningGoal,
     moneyMotivation:      answers.moneyMotivation || '',
@@ -708,22 +711,22 @@ async function submitQuiz(){
     socialMedia:          answers.socialMedia || '',
     isStudent:            answers.isStudent || '',
     board:                answers.board || '',
+    boardLevel:           answers.boardLevel || '',
+    igcseLevel:           answers.igcseLevel || '',
     schoolGrade:          answers.schoolGrade || '',
     subjects:             Array.isArray(answers.subjects) ? answers.subjects.join(', ') : '',
     schoolLink:           answers.schoolLink || '',
     communityAccess:      Array.isArray(answers.communityAccess) ? answers.communityAccess.join(', ') : '',
-    warmConnectionType:   answers.warmConnectionType || '',
-    warmConnectionDetail: answers.warmConnectionDetail || '',
     whatTheyHave:         Array.isArray(answers.whatTheyHave) ? answers.whatTheyHave.join(', ') : '',
     primaryBlocker:       Array.isArray(answers.primaryBlocker) ? answers.primaryBlocker.join(', ') : (answers.primaryBlocker || ''),
     clientFear:           Array.isArray(answers.clientFear) ? answers.clientFear.join(', ') : (answers.clientFear || ''),
     previousAttempts:     answers.previousAttempts || '',
-    previousAttemptDetail:answers.previousAttemptDetail || '',
+    previousAttemptDetail:clean(answers.previousAttemptDetail),
     learningStyle:        Array.isArray(answers.learningStyle) ? answers.learningStyle.join(', ') : (answers.learningStyle || ''),
     disciplineLevel:      answers.disciplineLevel || '',
     comfortLevel:         comfort,
     aiIntegration:        answers.aiIntegration || '',
-    winningVision:        answers.winningVision || '',
+    winningVision:        clean(answers.winningVision),
     moneyToStart:         (answers.budget && answers.budget !== 'Nothing right now') ? 'Yes' : 'No',
   };
 
