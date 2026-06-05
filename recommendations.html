@@ -474,15 +474,28 @@ let pollAttempts = 0;
 function cleanRec(t){ return (t||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseHustles(raw){
-  const text = cleanRec(raw);
+  // Normalize — insert newlines before known field names
+  const normalized = raw
+    .replace(/\s+(HUSTLE_NAME:)/g, '\n$1')
+    .replace(/\s+(RANGE:)/g, '\nRANGE:')
+    .replace(/\s+(FIRST_MONTH:)/g, '\nFIRST_MONTH:')
+    .replace(/\s+(HOURS:)/g, '\nHOURS:')
+    .replace(/\s+(TIMELINE:)/g, '\nTIMELINE:')
+    .replace(/\s+(WHATIITIS:|WHAT_IT_IS:)/g, '\n$1')
+    .replace(/\s+(TYPICALDAY:|TYPICAL_DAY:)/g, '\n$1')
+    .replace(/\s+(SATURATION:)/g, '\nSATURATION:')
+    .replace(/\s+(COMPETITION:)/g, '\nCOMPETITION:')
+    .replace(/\s+(WHY_MARKET:|WHYMARKET:)/g, '\n$1')
+    .replace(/\s+(WHY_YOU:|WHYYOU:)/g, '\n$1')
+    .replace(/\s+(COMMITMENT_SUMMARY:)/g, '\nCOMMITMENT_SUMMARY:');
+  const text = cleanRec(normalized);
   const blocks = text.split(/(?=HUSTLE_NAME:)/g).filter(b=>b.trim().length>20);
-  return blocks.slice(0,4).map(block=>{
+  return blocks.slice(0,5).map(block=>{
     const get = (key) => {
-      // Try both with-underscore and no-underscore variants
       const noUnderscore = key.replace(/_/g,'');
       const variants = [key, noUnderscore];
       for(const k of variants){
-        const re = new RegExp(k + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|---)');
+        const re = new RegExp(k + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{3,}:|\\n---|$)', 'i');
         const m = block.match(re);
         if(m && m[1].trim()) return cleanRec(m[1]);
       }
