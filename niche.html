@@ -512,12 +512,28 @@ let AIRTABLE_FIELDS = {}; // stores all fields for webhook
 function cleanStr(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseNiches(raw){
-  const blocks = raw.split(/\n?---\n?/).filter(b=>b.trim().length>20);
+  // Normalize — insert newlines before known field names (Worker flattens real newlines to spaces)
+  const normalized = raw
+    .replace(/\s+(NICHE_NAME:)/g, '\n$1')
+    .replace(/\s+(TAGS:)/g, '\nTAGS:')
+    .replace(/\s+(DEMAND:)/g, '\nDEMAND:')
+    .replace(/\s+(COMPETITION:)/g, '\nCOMPETITION:')
+    .replace(/\s+(AVG_BUDGET:|AVGBUDGET:)/g, '\n$1')
+    .replace(/\s+(WHY_FITS:|WHYFITS:)/g, '\n$1')
+    .replace(/\s+(WHY_INDIA:|WHYINDIA:)/g, '\n$1')
+    .replace(/\s+(WHY_NOW:|WHYNOW:)/g, '\n$1')
+    .replace(/\s+(SUMMARY:)/g, '\nSUMMARY:');
+  const blocks = normalized.split(/\n?---\n?/).filter(b=>b.trim().length>20);
   return blocks.slice(0,4).map(block=>{
     const get = (key) => {
-      const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|$)');
-      const m = block.match(re);
-      return m ? cleanStr(m[1]) : '';
+      const noUnderscore = key.replace(/_/g,'');
+      const variants = [key, noUnderscore];
+      for(const k of variants){
+        const re = new RegExp(k + ':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|\\n---|$)', 'i');
+        const m = block.match(re);
+        if(m && m[1].trim()) return cleanStr(m[1]);
+      }
+      return '';
     };
     const tagsRaw = get('TAGS');
     const tags = tagsRaw.split('|').map(t=>t.trim()).filter(t=>t.length>0);
