@@ -359,12 +359,21 @@ let toolPolls = 0;
 function cleanT(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/gm,'').trim(); }
 
 function parseTools(raw){
+  // Normalize — insert newlines before known field names (Worker flattens real newlines to spaces)
+  const normalized = raw
+    .replace(/\s+(TOOL_NAME:|TOOLNAME:)/gi, '\n$1')
+    .replace(/\s+(TOOL_TYPE:|TOOLTYPE:)/gi, '\n$1')
+    .replace(/\s+(HIDDEN_GEM:|HIDDENGEM:)/gi, '\n$1')
+    .replace(/\s+(WHAT_IT_DOES:|WHATITDOES:)/gi, '\n$1')
+    .replace(/\s+(HOW_TO_USE:|HOWTOUSE:)/gi, '\n$1')
+    .replace(/\s+(PROOF_IT_WORKS:|PROOFITWORKS:)/gi, '\n$1');
+
   // Split on --- separator
-  let blocks = raw.split(/\n?-{3,}\n?/).filter(b=>b.trim().length>20);
+  let blocks = normalized.split(/\n?-{3,}\n?/).filter(b=>b.trim().length>20);
   if(blocks.length < 2){
-    blocks = raw.split(/(?=TOOL_NAME:)/).filter(b=>b.trim().length>20);
+    blocks = normalized.split(/(?=\n?TOOL_NAME:)/i).filter(b=>b.trim().length>20);
   }
-  if(blocks.length === 0) blocks = [raw];
+  if(blocks.length === 0) blocks = [normalized];
 
   return blocks.slice(0,4).map(block=>{
     // Try both underscore and no-underscore variants
@@ -372,7 +381,7 @@ function parseTools(raw){
       const noUnderscore = key.replace(/_/g,'');
       const variants = [key, noUnderscore];
       for(const k of variants){
-        const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_0-9]+:|$)', 'i');
+        const re = new RegExp(k+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_0-9]+:|\\n---|$)', 'i');
         const m = block.match(re);
         if(m && m[1].trim()) return m[1].replace(/\*\*/g,'').replace(/\*/g,'').trim();
       }
