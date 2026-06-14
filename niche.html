@@ -104,11 +104,8 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
   border:1.5px solid var(--divider);border-radius:20px;
   overflow:hidden;position:relative;
   opacity:0;
-  transition:border-color .3s ease, box-shadow .3s ease;
+  transition:border-color .3s ease, box-shadow .3s ease, transform .3s ease;
   cursor:none;
-  /* 3D perspective setup */
-  transform-style:preserve-3d;
-  will-change:transform;
 }
 /* alternating slide directions set in JS */
 .niche-card:hover{border-color:var(--secondary);}
@@ -164,6 +161,7 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
   filter:blur(5px);
   letter-spacing:.01em;line-height:1;
   margin-bottom:16px;
+  pointer-events:none;
   transition:filter .6s ease,color .5s ease,background .5s ease,padding .5s ease,border-radius .5s ease;
 }
 .card-name-blur.revealed{
@@ -178,6 +176,7 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
   font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;
   cursor:none;margin-left:12px;margin-bottom:16px;
   transition:border-color .2s,color .2s,transform .2s;display:inline-block;
+  position:relative;z-index:5;
 }
 .card-reveal-btn:hover{border-color:var(--black);color:var(--black);transform:translateX(3px);}
 .card-reveal-btn.hidden{display:none;}
@@ -223,6 +222,60 @@ opacity:.2;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;
 .card-select-btn.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
 .card-select-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 28px rgba(10,10,10,.18);}
 .card-select-btn.chosen{background:var(--secondary);pointer-events:none;}
+
+/* ── SKELETON LOADER ── */
+.skeleton-card{
+  border:1.5px solid var(--divider);
+  border-radius:20px;
+  overflow:hidden;
+  background:transparent;
+  margin-bottom:0;
+  animation:skeletonFadeIn .5s ease forwards;
+  opacity:0;
+}
+.skeleton-card:nth-child(1){animation-delay:.05s;}
+.skeleton-card:nth-child(2){animation-delay:.15s;}
+.skeleton-card:nth-child(3){animation-delay:.25s;}
+.skeleton-card:nth-child(4){animation-delay:.35s;}
+
+.skeleton-header{
+  padding:20px 24px 16px;
+  border-bottom:1px solid var(--divider);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.skeleton-body{
+  padding:20px 24px 24px;
+}
+.shimmer{
+  background:linear-gradient(
+    90deg,
+    var(--divider) 0%,
+    rgba(232,230,224,.55) 50%,
+    var(--divider) 100%
+  );
+  background-size:200% 100%;
+  border-radius:6px;
+  animation:shimmerSlide 1.6s ease-in-out infinite;
+}
+.shimmer-num{width:32px;height:14px;}
+.shimmer-status{width:70px;height:14px;}
+.shimmer-title{width:65%;height:38px;margin-bottom:16px;}
+.shimmer-line{height:11px;margin-bottom:10px;}
+.shimmer-line.w90{width:90%;}
+.shimmer-line.w75{width:75%;}
+.shimmer-line.w60{width:60%;}
+
+@keyframes shimmerSlide{
+  0%{background-position:200% 0;}
+  100%{background-position:-200% 0;}
+}
+@keyframes skeletonFadeIn{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+#skeleton-wrap{display:flex;flex-direction:column;gap:20px;}
+#skeleton-wrap.gone{opacity:0;pointer-events:none;transition:opacity .4s ease;}
 
 /* ── CONFIRMATION MODAL ── */
 #modal-overlay{
@@ -368,8 +421,58 @@ fmStartLoading();
   </div>
 
   <div class="niche-list" id="niche-list">
-  <div class="timeline-fill" id="timeline-fill"></div>
-</div>
+    <div id="skeleton-wrap">
+      <div class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="shimmer shimmer-num"></div>
+          <div class="shimmer shimmer-status"></div>
+        </div>
+        <div class="skeleton-body">
+          <div class="shimmer shimmer-title"></div>
+          <div class="shimmer shimmer-line w90"></div>
+          <div class="shimmer shimmer-line w75"></div>
+          <div class="shimmer shimmer-line w60"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="shimmer shimmer-num"></div>
+          <div class="shimmer shimmer-status"></div>
+        </div>
+        <div class="skeleton-body">
+          <div class="shimmer shimmer-title"></div>
+          <div class="shimmer shimmer-line w90"></div>
+          <div class="shimmer shimmer-line w75"></div>
+          <div class="shimmer shimmer-line w60"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="shimmer shimmer-num"></div>
+          <div class="shimmer shimmer-status"></div>
+        </div>
+        <div class="skeleton-body">
+          <div class="shimmer shimmer-title"></div>
+          <div class="shimmer shimmer-line w90"></div>
+          <div class="shimmer shimmer-line w75"></div>
+          <div class="shimmer shimmer-line w60"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="shimmer shimmer-num"></div>
+          <div class="shimmer shimmer-status"></div>
+        </div>
+        <div class="skeleton-body">
+          <div class="shimmer shimmer-title"></div>
+          <div class="shimmer shimmer-line w90"></div>
+          <div class="shimmer shimmer-line w75"></div>
+          <div class="shimmer shimmer-line w60"></div>
+        </div>
+      </div>
+    </div>
+    <div class="timeline-fill" id="timeline-fill"></div>
+  </div>
 </div>
 
 <!-- MODAL -->
@@ -435,8 +538,17 @@ function parseNiches(raw){
 function buildNicheCards(){
   if(nichesRendered) return;
   nichesRendered = true;
+  // Fade out and remove skeletons first
+  const sk = document.getElementById('skeleton-wrap');
+  if(sk){
+    sk.classList.add('gone');
+    setTimeout(()=>{ if(sk.parentNode) sk.parentNode.removeChild(sk); }, 400);
+  }
   const list = document.getElementById('niche-list');
-  list.innerHTML = '';
+  // Preserve the timeline-fill — only clear non-skeleton, non-timeline children
+  Array.from(list.children).forEach(c=>{
+    if(c.id !== 'timeline-fill' && c.id !== 'skeleton-wrap') list.removeChild(c);
+  });
   NICHES.forEach((n,i)=>{
     const card = document.createElement('div');
     card.className = 'niche-card';
@@ -550,8 +662,8 @@ function positionDots(){
 }
 window.addEventListener('resize', positionDots);
 
-// ── START POLL
-setTimeout(pollNiches, 2000);
+// ── START POLL (immediate — skeleton is already showing)
+pollNiches();
 
 // Update timeline fill height
 function updateTimeline(){
@@ -571,32 +683,8 @@ function updateTimeline(){
   });
 }
 
-// ── 3D TILT ON MOUSE MOVE
-document.addEventListener('mousemove', e=>{
-  document.querySelectorAll('.niche-card.anim-done:not(.dimmed)').forEach(card=>{
-    const rect = card.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top  + rect.height/2;
-    const dx = (e.clientX - cx) / (rect.width/2);
-    const dy = (e.clientY - cy) / (rect.height/2);
-    // Only tilt when mouse is near the card
-    const dist = Math.sqrt(dx*dx+dy*dy);
-    if(dist < 1.4){
-      const rx = dy * -5; // tilt up/down
-      const ry = dx *  5; // tilt left/right
-      card.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(4px)`;
-    } else {
-      card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
-    }
-  });
-});
-
-// Reset tilt when mouse leaves
-document.addEventListener('mouseleave', ()=>{
-  document.querySelectorAll('.niche-card').forEach(card=>{
-    card.style.transform='perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
-  });
-});
+// ── 3D TILT REMOVED — was causing reveal button to feel unclickable
+// Card now uses subtle hover border-color change only (defined in CSS).
 
 // ── SCROLL REVEAL — alternating slide directions
 function checkReveal(){
