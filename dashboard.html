@@ -2078,7 +2078,7 @@ function loadState(){
 async function fetchFramework(){
   if(!RECORD_ID){ return null; }
   try{
-    const r=await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}`);
+    const r=await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=1`);
     const d=await r.json();
     const raw=d.fields?.['Module Framework']||'';
     if(raw && raw.length>100) return parseFramework(raw);
