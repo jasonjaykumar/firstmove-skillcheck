@@ -2171,26 +2171,26 @@ async function pollForFramework(){
 }
 
 function parseFramework(raw){
-  // S8A format: "1. TITLE: X | TYPE: Y | PROOF: Z | TIME: N | PHASE: N"
-  return raw.split('\n').filter(l=>l.trim() && /^\d+\./.test(l.trim())).slice(0,60).map((l,i)=>{
-    // Remove leading number
+  // Worker strips newlines — split on the numbered entry pattern instead
+  // Format: "1. TITLE: X | TYPE: Y | PROOF: Z | TIME: N | PHASE: N 2. TITLE: ..."
+  const normalized = raw.replace(/(\d+\.)\s+TITLE:/g, '\n$1 TITLE:');
+  return normalized.split('\n').filter(l=>l.trim() && /^\d+\./.test(l.trim())).slice(0,60).map((l,i)=>{
     const clean = l.replace(/^\d+\.\s*/, '').trim();
-    // Parse named fields
     const getField = (name) => {
       const m = clean.match(new RegExp(name+':\\s*([^|]+)'));
       return m ? m[1].trim() : '';
     };
-    const title = getField('TITLE') || clean.split('|')[0].trim() || 'Day '+(i+1);
-    const typeRaw = getField('TYPE') || 'NORMAL';
+    const title    = getField('TITLE') || clean.split('|')[0].trim() || 'Day '+(i+1);
+    const typeRaw  = getField('TYPE')  || 'NORMAL';
     const proofRaw = getField('PROOF') || 'HONOUR';
-    const timeRaw = parseInt(getField('TIME')) || 20;
+    const timeRaw  = parseInt(getField('TIME')) || 20;
     const phaseRaw = parseInt(getField('PHASE')) || (i<15?1:i<30?2:i<45?3:4);
     return {
-      title: title,
-      type: typeRaw.toUpperCase(),
+      title:     title,
+      type:      typeRaw.toUpperCase(),
       proofType: proofRaw.toUpperCase(),
-      time: timeRaw,
-      phase: phaseRaw,
+      time:      timeRaw,
+      phase:     phaseRaw,
     };
   });
 }
