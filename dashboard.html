@@ -1635,7 +1635,7 @@ let currentModuleIndex = 0;
 async function fetchModuleDetail(index){
   if(!RECORD_ID) return null;
   try{
-    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}`);
+    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
     const d = await r.json();
     const raw = d.fields?.[`Module Detail ${index+1}`] || d.fields?.['Module Detail'] || '';
     if(raw && raw.includes('MODULE_TITLE:')) return raw;
@@ -1709,22 +1709,33 @@ function pollModuleDetail(index, tries=0){
 
 // ─── PARSE S8B OUTPUT ─────────────────────────────────────────────────────────
 function parseModuleDetail(raw){
+  // Normalize — Worker strips newlines, so insert them before known field names
+  const normalized = raw
+    .replace(/\s+(MODULE_TITLE:)/g, '\n$1')
+    .replace(/\s+(PLITT_QUOTE:)/g, '\nPLITT_QUOTE:')
+    .replace(/\s+(MATERIALS_NEEDED:)/g, '\nMATERIALS_NEEDED:')
+    .replace(/\s+(OVERVIEW:)/g, '\nOVERVIEW:')
+    .replace(/\s+(WHY_THIS_MATTERS:)/g, '\nWHY_THIS_MATTERS:')
+    .replace(/\s+(THE_MISSION:)/g, '\nTHE_MISSION:')
+    .replace(/\s+(SCRIPT_OR_TEMPLATE:)/g, '\nSCRIPT_OR_TEMPLATE:')
+    .replace(/\s+(PROOF_OF_COMPLETION:)/g, '\nPROOF_OF_COMPLETION:')
+    .replace(/\s+(COACH_NOTE:)/g, '\nCOACH_NOTE:');
+
   const get=(key)=>{
-    const re=new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|\\n?$)');
-    const m=raw.match(re);
+    const re=new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|$)');
+    const m=normalized.match(re);
     return m?m[1].trim():'';
   };
   return {
-    title:      get('MODULE_TITLE'),
-    quote:      get('PLITT_QUOTE'),
-    materials:  get('MATERIALS_NEEDED'),
-    overview:   get('OVERVIEW'),
-    why:        get('WHY_THIS_MATTERS'),
-    tasks:      get('TASKS'),
-    doneWhen:   get('DONE_WHEN'),
-    proof:      get('PROOF_REQUIRED'),
-    stuck:      get('IF_STUCK'),
-    lingo:      get('LINGO'),
+    title:    get('MODULE_TITLE'),
+    quote:    get('PLITT_QUOTE'),
+    materials:get('MATERIALS_NEEDED'),
+    overview: get('OVERVIEW'),
+    why:      get('WHY_THIS_MATTERS'),
+    mission:  get('THE_MISSION'),
+    script:   get('SCRIPT_OR_TEMPLATE'),
+    proof:    get('PROOF_OF_COMPLETION'),
+    coach:    get('COACH_NOTE'),
   };
 }
 
@@ -1735,14 +1746,13 @@ function renderModuleSections(raw, index){
   if(d.quote) document.getElementById('plittQuote').textContent = `"${d.quote}"`;
 
   const sections = [
-    {label:'Before You Start',      html: renderMaterials(d.materials)},
+    {label:'Before You Start',         html: renderMaterials(d.materials)},
     {label:'What You\'re Doing Today', html: `<div class="section-body"><p>${d.overview||'...'}</p></div>`},
-    {label:'Why This Day Matters',  html: `<div class="section-body"><p>${d.why||'...'}</p></div>`},
-    {label:'Your Tasks',            html: renderTasks(d.tasks)},
-    {label:'You\'re Done When...',  html: `<div class="done-when">${d.doneWhen||'...'}</div>`},
-    {label:'Submit Your Proof',     html: renderProof(d.proof, mod?.proofType||'HONOUR', index)},
-    {label:'Stuck?',                html: `<div class="stuck-text">${d.stuck||'...'}</div>`},
-    {label:'Words Worth Knowing',   html: renderLingo(d.lingo)},
+    {label:'Why This Day Matters',     html: `<div class="section-body"><p>${d.why||'...'}</p></div>`},
+    {label:'The Mission',              html: renderTasks(d.mission)},
+    {label:'Script / Template',        html: `<div class="section-body"><p style="white-space:pre-line">${d.script||'Not required this module.'}</p></div>`},
+    {label:'You\'re Done When...',     html: `<div class="done-when">${d.proof||'...'}</div>`},
+    {label:'Coach Note',               html: `<div class="stuck-text">${d.coach||'...'}</div>`},
   ];
 
   const track = document.getElementById('swipeTrack');
@@ -2195,28 +2205,20 @@ Google Sheets — Track your leads and client conversations
 WhatsApp Business — Your primary client communication channel
 Notion — Keep your content calendar and tasks in one place
 OVERVIEW:
-Today you are building the foundation everything else runs on. Not the exciting part — the part that makes the exciting parts possible. You are setting up the four tools you will use every single day of this hustle. Think of this as workspace setup before the real work begins.
+Today you are building the foundation everything else runs on. Not the exciting part — the part that makes the exciting parts possible. You are setting up the four tools you will use every single day of this hustle.
 WHY_THIS_MATTERS:
 The teens who get their first client in week two are not more talented than the ones who do not. They are just more prepared. Having a professional Canva profile, a clean tracking sheet, and a WhatsApp Business account signals to clients that you are serious before you have said a single word.
-TASKS:
-1. Open **Canva** and create a free account using your email. Go to your profile and upload a clear photo — not a selfie, a proper photo with good lighting. Set your display name to your actual name.
-2. Create a new **Google Sheet** titled First Move Clients. Add columns: Business Name, Contact, Platform, Date DM, Reply, Status. This is your war room.
-3. Download **WhatsApp Business** and set it up with your number. Add a short bio: what you do, your city, one line about results. This is what clients see before they reply.
-4. Open **Notion** free account and create a page called Weekly Plan. Add todays date and write three things you want to accomplish this week.
-DONE_WHEN:
+THE_MISSION:
+1. Open Canva and create a free account using your email. Upload a clear photo — not a selfie, a proper photo with good lighting.
+2. Create a new Google Sheet titled First Move Clients. Add columns: Business Name, Contact, Platform, Date DM, Reply, Status.
+3. Download WhatsApp Business and set it up with your number. Add a short bio: what you do, your city, one line about results.
+4. Open a Notion free account and create a page called Weekly Plan. Write three things you want to accomplish this week.
+SCRIPT_OR_TEMPLATE:
+Not required this module.
+PROOF_OF_COMPLETION:
 You have a Canva account with your photo, a Google Sheet with 6 columns ready, WhatsApp Business live with a bio, and your Notion weekly plan created.
-PROOF_REQUIRED:
-Screenshot of your WhatsApp Business profile showing your bio and profile photo clearly visible.
-IF_STUCK:
-WhatsApp Business not available in your area — use regular WhatsApp and set your About text as your bio instead. Same result.
-LINGO:
-Client Pipeline
-The list of potential clients you are actively tracking from first DM to paying client. Your Google Sheet is your pipeline.
-[U]Say it as:[/U] I have 8 people in my pipeline right now.
-
-Rate Card
-A simple document showing your services and prices. Not a quote — a menu. Clients ask for it before they commit.
-[U]Say it as:[/U] Let me send you my rate card and we can go from there.`;
+COACH_NOTE:
+Most people skip the setup because it feels like admin. It is not admin. It is the difference between looking like someone who is serious and looking like someone who is trying. Your first client will check your WhatsApp profile before they reply to your DM. What they find there either opens the door or closes it. Get this done today.`;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
