@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>First Move — Your Results</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#E8E6E0;--black:#0A0A0A;--muted:#6B6B6B;--divider:#C8C6C0;--secondary:#4A4A4A;}
+html,body{width:100%;min-height:100%;background:var(--cream);font-family:'Space Grotesk',sans-serif;cursor:none;padding:0 8px;}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--black);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s;mix-blend-mode:difference;}
+#cursor.big{width:36px;height:36px;}
+
+/* GRAIN */
+body::before{content:'';position:fixed;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}
+30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}
+60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}}
+
+
+/* PAGE */
+#page{max-width:640px;margin:0 auto;padding:32px 52px 80px;position:relative;z-index:2;}
+@media(max-width:600px){#page{padding:28px 32px 80px;}}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;color:var(--black);}
+.nav-name{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+
+/* STATUS BADGE */
+.status-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 18px;border-radius:50px;
+  font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  margin-bottom:24px;
+  opacity:0;transform:translateY(-14px);
+}
+.status-badge.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.badge-dot{width:6px;height:6px;border-radius:50%;}
+.status-badge.ready{background:var(--black);color:var(--cream);}
+.status-badge.ready .badge-dot{background:var(--cream);}
+.status-badge.almost{background:transparent;color:var(--black);border:1.5px solid var(--black);}
+.status-badge.almost .badge-dot{background:var(--black);opacity:.4;}
+.status-badge.notready{background:var(--secondary);color:var(--cream);}
+.status-badge.notready .badge-dot{background:var(--cream);border-radius:2px;}
+
+/* HEADLINE */
+.headline{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(44px,9vw,76px);
+  color:var(--black);line-height:.93;letter-spacing:.01em;
+  margin-bottom:36px;
+  opacity:0;transform:translateY(20px);
+}
+.headline.go{animation:slideUp .7s cubic-bezier(.22,1,.36,1) .15s forwards;}
+
+/* SCORE */
+.score-block{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;opacity:0;}
+.score-block.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) .3s forwards;}
+.score-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,15vw,128px);color:var(--black);line-height:1;letter-spacing:-.02em;}
+.score-denom{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,46px);color:var(--muted);line-height:1;}
+.score-label{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:24px;opacity:0;}
+.score-label.go{animation:slideUp .5s ease .44s forwards;}
+
+/* SCORE BAR */
+.score-bar-wrap{height:2px;background:var(--divider);border-radius:2px;margin-bottom:36px;overflow:hidden;opacity:0;}
+.score-bar-wrap.go{animation:slideUp .4s ease .52s forwards;}
+.score-bar-fill{height:100%;background:var(--black);width:0%;border-radius:2px;transition:width 1.5s cubic-bezier(.22,1,.36,1);}
+
+/* SECTION DIVIDER */
+.section-divider{height:1px;background:var(--divider);margin:36px 0;opacity:0;}
+.section-divider.go{animation:slideUp .4s ease forwards;}
+
+/* BREAKDOWN */
+.breakdown-wrap{opacity:0;transform:translateY(16px);}
+.breakdown-wrap.go{animation:slideUp .7s cubic-bezier(.22,1,.36,1) forwards;}
+.breakdown-text{font-size:15px;color:var(--secondary);line-height:1.78;font-weight:300;margin-bottom:22px;}
+
+.breakdown-card{
+  border:1.5px solid var(--divider);border-radius:20px;
+  padding:24px;margin-bottom:4px;position:relative;overflow:hidden;
+}
+.breakdown-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;}
+.breakdown-card.ready::before{background:var(--black);}
+.breakdown-card.almost::before{background:var(--secondary);}
+.breakdown-card.notready::before{background:var(--muted);}
+.breakdown-card p{font-size:13px;line-height:1.78;color:var(--secondary);font-weight:300;}
+
+/* CTA SPLIT */
+.cta-block{margin:28px 0;opacity:0;transform:translateY(16px);}
+.cta-block.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.cta-split{
+  display:flex;align-items:stretch;gap:0;
+  border:1.5px solid var(--divider);border-radius:20px;
+  overflow:hidden;
+}
+.cta-option{
+  flex:1;padding:24px 22px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.cta-divider{
+  width:1px;background:var(--divider);
+  flex-shrink:0;
+}
+.cta-desc{
+  font-size:12px;color:var(--muted);font-weight:300;
+  line-height:1.65;
+}
+@media(max-width:480px){
+  .cta-split{flex-direction:column;}
+  .cta-divider{width:100%;height:1px;}
+}
+
+.btn-primary{
+  width:100%;background:var(--black);color:var(--cream);
+  border:none;padding:18px 32px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  cursor:none;transition:transform .25s ease,box-shadow .25s ease;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(10,10,10,.18);}
+.btn-secondary{
+  width:100%;background:transparent;color:var(--black);
+  border:1.5px solid var(--divider);padding:16px 32px;border-radius:50px;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:500;
+  cursor:none;transition:transform .25s ease,border-color .2s;
+}
+.btn-secondary:hover{transform:translateY(-2px);border-color:var(--secondary);}
+
+/* LEARNING PATH */
+.path-header{opacity:0;transform:translateY(16px);margin-bottom:6px;}
+.path-header.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.path-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,44px);color:var(--black);letter-spacing:.01em;margin-bottom:6px;}
+.path-sub{font-size:12px;color:var(--muted);font-weight:300;letter-spacing:.04em;margin-bottom:24px;}
+
+/* DAY CARDS */
+.day-cards{display:flex;flex-direction:column;gap:12px;}
+.day-card{border:1.5px solid var(--divider);border-radius:20px;padding:22px;opacity:0;transform:translateY(20px);transition:border-color .2s,transform .2s ease;}
+.day-card.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.day-card:hover{border-color:var(--secondary);transform:translateX(5px);}
+.day-label{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.day-label::after{content:'';flex:1;height:1px;background:var(--divider);}
+.day-text{font-size:13px;line-height:1.78;color:var(--secondary);font-weight:300;}
+.day-text a{color:var(--black);font-weight:500;text-underline-offset:3px;}
+
+/* BOTTOM CTA */
+.bottom-cta{margin-top:40px;display:flex;flex-direction:column;gap:10px;opacity:0;}
+.bottom-cta.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+
+/* QUESTION REVIEW */
+.review-wrap{margin-top:36px;opacity:0;transform:translateY(16px);}
+.review-wrap.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+.review-header{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,36px);color:var(--black);letter-spacing:.01em;margin-bottom:6px;}
+.review-sub{font-size:12px;color:var(--muted);font-weight:300;margin-bottom:20px;}
+.q-card{
+  border:1.5px solid var(--divider);border-radius:16px;padding:18px 20px;
+  margin-bottom:10px;position:relative;overflow:hidden;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1);
+}
+.q-card.go{opacity:1;transform:translateY(0);}
+.q-card.correct{border-color:rgba(34,139,34,0.4);background:rgba(34,139,34,0.04);}
+.q-card.wrong{border-color:rgba(180,30,30,0.4);background:rgba(180,30,30,0.04);}
+.q-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;
+}
+.q-card.correct::before{background:#228B22;}
+.q-card.wrong::before{background:#B41E1E;}
+@keyframes wrongShake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+.q-card.wrong.go{animation:wrongShake .4s ease, slideUp .5s cubic-bezier(.22,1,.36,1);}
+@keyframes correctFill{
+  from{width:0%}to{width:100%}
+}
+.q-card.correct .q-fill{
+  position:absolute;inset:0;background:rgba(34,139,34,0.06);
+  animation:correctFill .6s cubic-bezier(.22,1,.36,1) forwards;
+  pointer-events:none;z-index:0;
+}
+.q-num{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;position:relative;z-index:1;}
+.q-text{font-size:13px;color:var(--black);font-weight:500;line-height:1.5;margin-bottom:10px;position:relative;z-index:1;}
+.q-your-answer{font-size:11px;color:var(--muted);margin-bottom:4px;position:relative;z-index:1;}
+.q-correct-answer{font-size:11px;font-weight:600;position:relative;z-index:1;}
+.q-card.correct .q-correct-answer{color:#228B22;}
+.q-card.wrong .q-correct-answer{color:#B41E1E;}
+.q-why{font-size:11px;color:var(--muted);font-weight:300;line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--divider);position:relative;z-index:1;}
+.q-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;
+  padding:3px 10px;border-radius:50px;margin-bottom:8px;position:relative;z-index:1;
+}
+.q-badge.correct{background:rgba(34,139,34,0.12);color:#228B22;}
+.q-badge.wrong{background:rgba(180,30,30,0.1);color:#B41E1E;}
+
+/* CTA SINGLE */
+.cta-single{margin:28px 0;opacity:0;transform:translateY(16px);}
+.cta-single.go{animation:slideUp .6s cubic-bezier(.22,1,.36,1) forwards;}
+
+/* ANIMATIONS */
+@keyframes slideUp{to{opacity:1;transform:translateY(0);}}
+
+/* ─── LOADING SCREEN ─────────────────────────────────────────────────────────── */
+.fm-loading{
+  position:fixed;inset:0;z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg, #E8E6E0);gap:28px;
+  transition:opacity 0.6s ease, visibility 0.6s ease;
+}
+.fm-loading.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.fm-loading-wordmark{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.2em;
+  color:rgba(10,10,10,0.3);margin-bottom:8px;
+}
+[data-theme="dark"] .fm-loading-wordmark{color:rgba(232,230,224,0.3);}
+.fm-loading-msg{
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:300;
+  color:rgba(10,10,10,0.6);text-align:center;max-width:340px;line-height:1.6;
+  min-height:48px;transition:opacity 0.4s;
+}
+[data-theme="dark"] .fm-loading-msg{color:rgba(232,230,224,0.6);}
+.fm-loading-bar{
+  width:200px;height:1px;background:rgba(10,10,10,0.12);border-radius:1px;overflow:hidden;
+}
+[data-theme="dark"] .fm-loading-bar{background:rgba(232,230,224,0.12);}
+.fm-loading-fill{
+  height:100%;background:#0A0A0A;border-radius:1px;
+  animation:fmBarSlide 1.8s ease-in-out infinite;
+}
+[data-theme="dark"] .fm-loading-fill{background:#E8E6E0;}
+@keyframes fmBarSlide{
+  0%{width:0%;margin-left:0}
+  50%{width:55%;margin-left:22%}
+  100%{width:0%;margin-left:100%}
+}
+.fm-loading-retry{
+  display:none;font-family:'Space Grotesk',sans-serif;font-size:12px;
+  font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:#0A0A0A;background:transparent;border:1px solid rgba(10,10,10,0.3);
+  border-radius:4px;padding:10px 24px;cursor:pointer;margin-top:8px;
+}
+[data-theme="dark"] .fm-loading-retry{color:#E8E6E0;border-color:rgba(232,230,224,0.3);}
+.fm-loading-retry:hover{opacity:0.7;}
+
+
+/* ─── LOADING SCREEN ─────────────────────────────────────────────────────────── */
+.fm-loading{
+  position:fixed;inset:0;z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg, #E8E6E0);gap:28px;
+  transition:opacity 0.6s ease, visibility 0.6s ease;
+}
+.fm-loading.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.fm-loading-wordmark{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.2em;
+  color:rgba(10,10,10,0.3);margin-bottom:8px;
+}
+[data-theme="dark"] .fm-loading-wordmark{color:rgba(232,230,224,0.3);}
+.fm-loading-msg{
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:300;
+  color:rgba(10,10,10,0.6);text-align:center;max-width:340px;line-height:1.6;
+  min-height:48px;transition:opacity 0.4s;
+}
+[data-theme="dark"] .fm-loading-msg{color:rgba(232,230,224,0.6);}
+.fm-loading-bar{
+  width:200px;height:1px;background:rgba(10,10,10,0.12);border-radius:1px;overflow:hidden;
+}
+[data-theme="dark"] .fm-loading-bar{background:rgba(232,230,224,0.12);}
+.fm-loading-fill{
+  height:100%;background:#0A0A0A;border-radius:1px;
+  animation:fmBarSlide 1.8s ease-in-out infinite;
+}
+[data-theme="dark"] .fm-loading-fill{background:#E8E6E0;}
+@keyframes fmBarSlide{
+  0%{width:0%;margin-left:0}
+  50%{width:55%;margin-left:22%}
+  100%{width:0%;margin-left:100%}
+}
+.fm-loading-retry{
+  display:none;font-family:'Space Grotesk',sans-serif;font-size:12px;
+  font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:#0A0A0A;background:transparent;border:1px solid rgba(10,10,10,0.3);
+  border-radius:4px;padding:10px 24px;cursor:pointer;margin-top:8px;
+}
+[data-theme="dark"] .fm-loading-retry{color:#E8E6E0;border-color:rgba(232,230,224,0.3);}
+.fm-loading-retry:hover{opacity:0.7;}
+
+</style>
+
+
+<script>
+// ─── LOADING SCREEN MANAGER ───────────────────────────────────────────────────
+var fmLoadingMsgs = [
+  [0,   'Building your results...'],
+  [15,  'Claude is being thorough — almost there...'],
+  [35,  'Taking a little longer than usual — still on it...'],
+  [60,  'Nearly done — this one needed extra thought...'],
+  [100, 'Still going — hang tight just a moment more...'],
+];
+var fmLoadingTimer = 0;
+var fmLoadingInterval = null;
+
+function fmStartLoading(){
+  fmLoadingTimer = 0;
+  fmLoadingInterval = setInterval(function(){
+    fmLoadingTimer++;
+    var msg = document.getElementById('fm-loading-msg');
+    if(!msg) return;
+    for(var i = fmLoadingMsgs.length-1; i >= 0; i--){
+      if(fmLoadingTimer >= fmLoadingMsgs[i][0]){
+        msg.textContent = fmLoadingMsgs[i][1];
+        break;
+      }
+    }
+    // After 3 minutes show retry
+    if(fmLoadingTimer >= 180){
+      clearInterval(fmLoadingInterval);
+      var retry = document.getElementById('fm-loading-retry');
+      var msgEl = document.getElementById('fm-loading-msg');
+      if(retry) retry.style.display='block';
+      if(msgEl) msgEl.textContent = 'Something took too long. Your data may still be generating.';
+    }
+  }, 1000);
+}
+
+function fmHideLoading(){
+  clearInterval(fmLoadingInterval);
+  var el = document.getElementById('fm-loading');
+  if(el) el.classList.add('hidden');
+}
+
+// Start loading timer on page load
+fmStartLoading();
+</script>
+</head>
+<body>
+<div id="cursor"></div>
+
+<div id="page">
+  <div class="nav">
+    <span class="nav-logo">First Move</span>
+    <span class="nav-name" id="nav-name"></span>
+  </div>
+
+  <div class="status-badge almost" id="status-badge">
+    <span class="badge-dot"></span>
+    <span id="status-text">Almost There</span>
+  </div>
+
+  <h1 class="headline" id="headline">You're close,<br>Jason.</h1>
+
+  <div class="score-block" id="score-block">
+    <span class="score-num" id="score-num">0</span>
+    <span class="score-denom" id="score-denom">/12</span>
+  </div>
+  <div class="score-label" id="score-label">Skill Check Score</div>
+  <div class="score-bar-wrap" id="score-bar-wrap">
+    <div class="score-bar-fill" id="score-bar-fill"></div>
+  </div>
+
+  <div class="breakdown-wrap" id="breakdown-wrap">
+    <p class="breakdown-text" id="breakdown-text">You've got a solid foundation in communication and design thinking — you're clearly able to explain concepts and understand visual appeal, which are huge assets for anyone wanting to earn money in these fields. The areas where we level up together are persuasion depth and technical knowledge.</p>
+    <div class="breakdown-card almost" id="breakdown-card">
+      <p id="breakdown-card-text">You're closer than you think, but close isn't ready yet. There are gaps in your understanding that your first client will notice before you do. That's not a knock — it's just honest. One focused week with the right resources and you'll be in a completely different place.</p>
+    </div>
+  </div>
+
+  <div class="cta-single" id="cta-block">
+    <button class="btn-primary" id="btn-continue">Show me my moves</button>
+  </div>
+
+  <div class="review-wrap" id="review-wrap">
+    <div class="review-header">How you did.</div>
+    <p class="review-sub">Every question. Where you landed and why it matters.</p>
+    <div id="q-cards"></div>
+  </div>
+</div>
+
+<script>
+// CURSOR
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX+'px';
+  cursor.style.top = e.clientY+'px';
+});
+document.addEventListener('mouseover', e => {
+  cursor.classList.toggle('big', !!e.target.closest('button,a'));
+});
+
+// PARAMS
+const params   = new URLSearchParams(window.location.search);
+const recordId = params.get('id') || '';
+const NAME     = params.get('name') || 'You';
+
+// AIRTABLE FETCH
+const WORKER  = 'https://firstmove-airtable.joinfirstmove.workers.dev';
+let pollCount = 0;
+let FIELDS = {}; // ← STORES ALL AIRTABLE FIELDS FOR WEBHOOK
+let SHOWN_SCORE = 0, SHOWN_MAX = 12; // what the page is displaying (used by the score easter egg)
+
+function cleanR(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').trim(); }
+
+// Every section label S2 can write into the Grade field.
+// Add new labels here when S2 gains fields (mismatch flag, alt path, etc).
+const GRADE_KEYS = ['STATUS','SCORE','BREAKDOWN','LEARNING_PATH','QUESTIONS'];
+const GRADE_KEY_RE = GRADE_KEYS.join('|');
+
+// The Worker returns Airtable text with newlines stripped, so the labels arrive
+// inline ("...confident. LEARNING_PATH: Day 1-2..."). Put each label back on its
+// own line before parsing. Safe to run on text that still has its newlines.
+function normalizeGrade(raw){
+  return cleanR(raw)
+    .replace(/\r/g,'')
+    .replace(new RegExp('\\s*\\b('+GRADE_KEY_RE+')\\s*:', 'g'), '\n$1:')
+    .trim();
+}
+
+function gradeSection(norm, key){
+  const re = new RegExp('(?:^|\\n)'+key+':\\s*([\\s\\S]*?)(?=\\n(?:'+GRADE_KEY_RE+'):|$)');
+  const m  = norm.match(re);
+  return m ? m[1].trim() : '';
+}
+
+function parseGrade(raw){
+  const norm = normalizeGrade(raw);
+  const get  = (key) => gradeSection(norm, key);
+
+  // SCORE: "10/12" today, "14/20" after the S2 rewrite. Read both numbers.
+  const sm       = get('SCORE').match(/(\d+)\s*(?:\/\s*(\d+))?/);
+  const hasScore = !!sm;
+  const max      = (sm && parseInt(sm[2],10)) || 12;
+  const score    = sm ? Math.min(parseInt(sm[1],10), max) : 0;
+
+  // STATUS: trust S2 if it gave a valid one, otherwise derive it from the score
+  // (75% and 50% cut-offs match both the /12 and the /20 thresholds).
+  const statusRaw = get('STATUS').toUpperCase().replace(/[^A-Z_ ]/g,'').trim().replace(/\s+/g,'_');
+  let status = ['READY','ALMOST','NOT_READY'].includes(statusRaw) ? statusRaw : '';
+  if(!status){
+    const ratio = hasScore ? score/max : 0.5;
+    status = ratio >= 0.75 ? 'READY' : ratio >= 0.5 ? 'ALMOST' : 'NOT_READY';
+  }
+
+  const breakdown    = get('BREAKDOWN');
+  const learningPath = get('LEARNING_PATH');
+  const questions    = get('QUESTIONS');
+  return { status, score, max, breakdown, learningPath, questions };
+}
+
+function pollResults(){
+  if(!recordId){
+    document.body.style.cssText='min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;font-family:Space Grotesk,sans-serif;background:#E8E6E0;text-align:center;';
+    document.body.innerHTML='<div style="font-family:Bebas Neue,sans-serif;font-size:13px;letter-spacing:0.15em;color:rgba(10,10,10,0.4);margin-bottom:24px">FIRST MOVE</div><h1 style="font-family:Bebas Neue,sans-serif;font-size:48px;color:#0A0A0A;margin-bottom:16px;line-height:1">LINK MISSING.</h1><p style="font-size:15px;font-weight:300;color:rgba(10,10,10,0.6);max-width:380px;line-height:1.7;margin-bottom:32px">Check the email we sent you. Your personal results link is in there. Check your spam folder if you cannot find it.</p><a href="quiz-intro.html" style="font-size:12px;color:rgba(10,10,10,0.4);text-decoration:underline">Start over instead</a>';
+    return;
+  }
+  fetch(`${WORKER}?id=${encodeURIComponent(recordId)}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const fields = data.fields || data;
+      FIELDS = fields; // ← STORE ALL FIELDS
+      const raw    = fields['Grade'] || fields['grade'] || '';
+      const name   = fields['Name'] || fields['name'] || NAME;
+      if(raw && raw.trim().length > 20){
+        const {status, score, max, breakdown} = parseGrade(raw);
+        applyData(status, score, breakdown, name, max);
+      } else {
+        pollCount++;
+        if(pollCount < 60) setTimeout(pollResults, 3000);
+        else applyData('ALMOST', 7, '', NAME);
+      }
+    })
+    .catch(()=>{
+      pollCount++;
+      if(pollCount < 60) setTimeout(pollResults, 3000);
+      else applyData('ALMOST', 7, '', NAME);
+    });
+}
+
+function applyData(STATUS, SCORE, BREAKDOWN, name, MAX){
+MAX = MAX || 12;
+SHOWN_SCORE = SCORE; SHOWN_MAX = MAX;
+// Name for the headline: Airtable first, URL param second. Escaped because it goes into innerHTML.
+const WHO = String(name || NAME).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.getElementById('score-denom').textContent = '/' + MAX;
+
+// STATUS CONFIG
+const cfg = {
+  READY:{
+    badgeClass:'ready', badgeText:'Ready',
+    headline:`You're ready,<br>${WHO}.`,
+    cardClass:'ready',
+    cardText:`Your fundamentals are solid. Most people your age are still googling "how to make money online" — you actually know what you're doing. The work now is execution, not preparation. Every day you wait is a day someone else takes the client you could have had.`,
+    btnContinue:'Show me my moves',
+    btnArsenal:'Sharpen further anyway'
+  },
+  ALMOST:{
+    badgeClass:'almost', badgeText:'Almost There',
+    headline:`You're close,<br>${WHO}.`,
+    cardClass:'almost',
+    cardText:`You're closer than you think, but close isn't ready yet. There are gaps in your understanding that your first client will notice before you do. That's not a knock — it's just honest. One focused week with the right resources and you'll be in a completely different place.`,
+    btnContinue:`I'm ready, show me my moves`,
+    btnArsenal:'Sharpen my arsenal first'
+  },
+  NOT_READY:{
+    badgeClass:'notready', badgeText:'Not There Yet',
+    headline:`Be honest<br>with yourself, ${WHO}.`,
+    cardClass:'notready',
+    cardText:`The gaps are real and they matter. Going into client work right now means delivering work you can't stand behind — and that first bad experience is hard to shake. This isn't a wall, it's a week. The resources below are the exact path. Do the work. Come back stronger.`,
+    btnContinue:`I'll take my chances`,
+    btnArsenal:'Close the gaps first'
+  }
+}[STATUS] || {
+  badgeClass:'almost', badgeText:'Almost There',
+  headline:`You're close,<br>${WHO}.`,
+  cardClass:'almost',
+  cardText:`You're closer than you think, but close isn't ready yet.`,
+  btnContinue:`Show me my moves`,
+  btnArsenal:'Sharpen my arsenal first'
+};
+
+// APPLY
+const badge = document.getElementById('status-badge');
+badge.className = `status-badge ${cfg.badgeClass}`;
+badge.innerHTML = `<span class="badge-dot"></span><span>${cfg.badgeText}</span>`;
+document.getElementById('headline').innerHTML = cfg.headline;
+document.getElementById('breakdown-card').className = `breakdown-card ${cfg.badgeClass}`;
+document.getElementById('breakdown-card-text').textContent = cfg.cardText;
+document.getElementById('nav-name').textContent = name;
+document.getElementById('btn-continue').textContent = cfg.btnContinue;
+
+// Show personalised breakdown if available
+if(BREAKDOWN && BREAKDOWN.length > 10){
+  document.getElementById('breakdown-text').textContent = BREAKDOWN;
+}
+
+// REVEAL MAP
+const revealMap = [
+  {id:'status-badge',  delay:0},
+  {id:'headline',      delay:150},
+  {id:'score-block',   delay:300},
+  {id:'score-label',   delay:420},
+  {id:'score-bar-wrap',delay:500},
+  {id:'breakdown-wrap',delay:620},
+  {id:'cta-block',     delay:780},
+  {id:'review-wrap',   delay:950},
+];
+
+revealMap.filter(r=>!r.scroll).forEach(r=>{
+  setTimeout(()=>{
+    const el=document.getElementById(r.id);
+    if(el) el.classList.add('go');
+    if(r.id==='score-block') startCounter();
+    if(r.id==='score-bar-wrap') setTimeout(()=>{ document.getElementById('score-bar-fill').style.width=`${(SCORE/MAX)*100}%`; },100);
+    if(r.id==='review-wrap') renderQuestionReview();
+  }, r.delay);
+});
+
+const scrollItems = revealMap.filter(r=>r.scroll);
+function checkScroll(){
+  scrollItems.forEach(r=>{
+    const el=document.getElementById(r.id);
+    if(!el||el.classList.contains('go')) return;
+    if(el.getBoundingClientRect().top < window.innerHeight*.9){
+      setTimeout(()=>el.classList.add('go'), r.delay);
+    }
+  });
+}
+window.addEventListener('scroll', checkScroll, {passive:true});
+checkScroll();
+
+// SCORE COUNTER
+function startCounter(){
+  const el=document.getElementById('score-num');
+  const dur=1400, start=Date.now();
+  function tick(){
+    const p=Math.min(1,(Date.now()-start)/dur);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(ease*SCORE);
+    if(p<1) requestAnimationFrame(tick);
+    else el.textContent=SCORE;
+  }
+  requestAnimationFrame(tick);
+}
+
+// QUESTION REVIEW
+function renderQuestionReview(){
+  const container = document.getElementById('q-cards');
+  if(!container) return;
+  // Parse per-question results from FIELDS if available
+  // Expected format in Grade field: QUESTIONS: Q1|your_answer|correct_answer|why\nQ2|...
+  const qSection = parseGrade(FIELDS['Grade'] || '').questions;
+  // Newlines are stripped in transit, so also split before each "Q1|", "Q2|" marker.
+  const lines = qSection.split(/\n|\s+(?=Q\d+\s*\|)/).filter(l=>l.trim().length>5);
+
+  // Fallback: generate placeholder cards based on score
+  if(lines.length === 0){
+    container.innerHTML = `<p style="font-size:13px;color:var(--muted);font-weight:300;line-height:1.6">
+      Detailed question breakdown will appear here after your next skill check.
+    </p>`;
+    return;
+  }
+
+  lines.forEach((line, idx)=>{
+    const parts = line.split('|');
+    const qText    = (parts[0]||'').trim();
+    const yourAns  = (parts[1]||'').trim();
+    const correctAns=(parts[2]||'').trim();
+    const why      = (parts[3]||'').trim();
+    const isCorrect = yourAns.toLowerCase() === correctAns.toLowerCase()
+                   || (parts[4]||'').trim().toUpperCase() === 'CORRECT';
+
+    const card = document.createElement('div');
+    card.className = `q-card ${isCorrect?'correct':'wrong'}`;
+    card.innerHTML = `
+      ${isCorrect ? '<div class="q-fill"></div>' : ''}
+      <div class="q-badge ${isCorrect?'correct':'wrong'}">${isCorrect?'✓ Correct':'✗ Wrong'}</div>
+      <div class="q-num">Question ${idx+1}</div>
+      <div class="q-text">${qText}</div>
+      <div class="q-your-answer">Your answer: <strong>${yourAns||'—'}</strong></div>
+      <div class="q-correct-answer">Correct answer: ${correctAns||'—'}</div>
+      ${why ? `<div class="q-why">${why}</div>` : ''}
+    `;
+    container.appendChild(card);
+
+    // Staggered reveal
+    setTimeout(()=>card.classList.add('go'), idx * 120);
+  });
+}
+
+} // end applyData
+
+// BUTTONS
+function goToRecommendations(){
+  // Send all user fields to S2 webhook so Claude has full context
+  fetch('https://hook.eu1.make.com/qhsimsnv26dbxydsjkbpihnnuflh2lya', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      recordId:         recordId,
+      name:             FIELDS['Name'] || '',
+      age:              FIELDS['Age'] || '',
+      city:             FIELDS['City'] || '',
+      skillArea:        FIELDS['Skills Multi'] || '',
+      enjoysDoing:      FIELDS['Enjoys doing'] || '',
+      timeAvailable:    FIELDS['Time Available'] || '',
+      earningGoal:      FIELDS['Earning goal'] || '',
+      moneyMotivation:  FIELDS['Money Motivation'] || '',
+      timeline:         FIELDS['Timeline'] || '',
+      moneyToStart:     FIELDS['Money to start'] || '',
+      deviceAccess:     FIELDS['Device access multi'] || '',
+      socialMedia:      FIELDS['Social Media'] || '',
+      previousAttempts: FIELDS['Previous Attempts '] || ''
+    })
+  }).catch(e => console.warn('S2 webhook error:', e));
+
+  window.location.href = `recommendations.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
+}
+function goToArsenal(){
+  window.location.href = `arsenal.html?id=${recordId}&name=${encodeURIComponent(NAME)}`;
+}
+document.getElementById('btn-continue')?.addEventListener('click', goToRecommendations);
+document.getElementById('btn-arsenal')?.addEventListener('click', goToArsenal);
+
+// START
+setTimeout(pollResults, 5000);
+
+// ── BREATHING BACKGROUND
+(function(){
+  let t=Math.random()*Math.PI*2;
+  const spd=0.005+Math.random()*0.003;
+  function breath(){
+    t+=spd;
+    const mix=(Math.sin(t)+1)/2;
+    const r=Math.round(232+(222-232)*mix);
+    const g=Math.round(230+(218-230)*mix);
+    const b=Math.round(224+(211-224)*mix);
+    document.body.style.backgroundColor=`rgb(${r},${g},${b})`;
+    requestAnimationFrame(breath);
+  }
+  requestAnimationFrame(breath);
+})();
+
+// ── EASTER EGG: Hover score number 3s — counts up to the max then back
+const scoreEl=document.getElementById('score-num');
+if(scoreEl){
+  let hoverTimer, taunting=false;
+  scoreEl.addEventListener('mouseenter',()=>{
+    if(taunting) return;
+    hoverTimer=setTimeout(()=>{
+      taunting=true;
+      const orig=SHOWN_SCORE;
+      let cur=orig;
+      const upInterval=setInterval(()=>{
+        cur++;
+        scoreEl.textContent=cur;
+        if(cur>=SHOWN_MAX){
+          clearInterval(upInterval);
+          setTimeout(()=>{
+            const downInterval=setInterval(()=>{
+              cur--;
+              scoreEl.textContent=cur;
+              if(cur<=orig){
+                clearInterval(downInterval);
+                scoreEl.textContent=orig;
+                taunting=false;
+              }
+            }, 280);
+          }, 600);
+        }
+      }, 55);
+    },3000);
+  });
+  scoreEl.addEventListener('mouseleave',()=>{
+    clearTimeout(hoverTimer);
+  });
+}
+
+// ── EASTER EGG: Logo 5x click
+let lc=0,lt;
+document.querySelector('.nav-logo')?.addEventListener('click',()=>{
+  lc++; clearTimeout(lt); lt=setTimeout(()=>lc=0,1500);
+  if(lc>=5){
+    lc=0;
+    const q='"Today it begins. Tomorrow it continues. And it never ends, until you reach your goal."';
+    const el=document.createElement('div');
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:#E8E6E0;padding:16px 24px;border-radius:12px;font-family:Space Grotesk,sans-serif;font-size:12px;max-width:380px;text-align:center;z-index:9998;opacity:0;transition:opacity .4s ease;line-height:1.6;';
+    el.textContent=q;
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.style.opacity='1');
+    setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),500); },2500);
+  }
+});
+</script>
+</body>
+</html>
