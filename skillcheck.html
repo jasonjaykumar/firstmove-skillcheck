@@ -732,7 +732,11 @@ function submitAnswers(){
     q4: idxToLetter(answers[3]), correct4: idxToLetter(QUESTIONS[3]?.correct ?? 0),
     q5: idxToLetter(answers[4]), correct5: idxToLetter(QUESTIONS[4]?.correct ?? 0),
     q6: idxToLetter(answers[5]), correct6: idxToLetter(QUESTIONS[5]?.correct ?? 0),
-    skillArea: SKILL_AREA
+    skillArea: SKILL_AREA,
+    // Full quiz text so S2 can explain each answer. Quotes, backslashes and line
+    // breaks are stripped here so Make can drop it into its JSON body untouched.
+    quizText: QUESTIONS.map((q,i)=>`Q${i+1}: ${q.q} A) ${q.opts[0]} B) ${q.opts[1]} C) ${q.opts[2]}`)
+                       .join(' ').replace(/["\\]/g,"'").replace(/\s+/g,' ').trim()
   };
 
   fetch(S3_HOOK, {

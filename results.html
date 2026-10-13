@@ -19,7 +19,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='htt
 opacity:.25;animation:grain .35s steps(1) infinite;pointer-events:none;z-index:0;}
 @keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}
 30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}
-60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}};
+60%{transform:translate(1%,-4%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}90%{transform:translate(-1%,2%)}}
 
 
 /* PAGE */
@@ -360,7 +360,7 @@ fmStartLoading();
 
   <div class="score-block" id="score-block">
     <span class="score-num" id="score-num">0</span>
-    <span class="score-denom">/12</span>
+    <span class="score-denom" id="score-denom">/12</span>
   </div>
   <div class="score-label" id="score-label">Skill Check Score</div>
   <div class="score-bar-wrap" id="score-bar-wrap">
@@ -405,21 +405,95 @@ const NAME     = params.get('name') || 'You';
 const WORKER  = 'https://firstmove-airtable.joinfirstmove.workers.dev';
 let pollCount = 0;
 let FIELDS = {}; // ← STORES ALL AIRTABLE FIELDS FOR WEBHOOK
+let SHOWN_SCORE = 0, SHOWN_MAX = 12; // what the page is displaying (used by the score easter egg)
 
 function cleanR(s){ return (s||'').replace(/\*\*/g,'').replace(/\*/g,'').trim(); }
 
+// Every section label S2 can write into the Grade field.
+// Add new labels here when S2 gains fields (mismatch flag, alt path, etc).
+const GRADE_KEYS = ['STATUS','SCORE','BREAKDOWN','LEARNING_PATH','QUESTIONS','END_GRADE'];
+const GRADE_KEY_RE = GRADE_KEYS.join('|');
+
+// The Worker returns Airtable text with newlines stripped, so the labels arrive
+// inline ("...confident. LEARNING_PATH: Day 1-2..."). Put each label back on its
+// own line before parsing. Safe to run on text that still has its newlines.
+function normalizeGrade(raw){
+  return cleanR(raw)
+    .replace(/\r/g,'')
+    .replace(/\s*\bEND_GRADE\b\s*:?/g, '\nEND_GRADE:')
+    .replace(new RegExp('\\s*\\b('+GRADE_KEY_RE+')\\s*:', 'g'), '\n$1:')
+    .trim();
+}
+
+// HTML-escape anything that came from the model or the quiz before it goes into innerHTML.
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// QUESTIONS section: one entry per question, "Q1|B|C|one line reason|WRONG".
+// The newlines get stripped in transit, so split before each "Qn|" marker as well.
+function parseQuestionLines(section){
+  return (section||'')
+    .split(/\n|\s+(?=Q\d+\s*\|)/)
+    .map(l=>l.trim())
+    .map(l=>l.match(/^Q?(\d+)\s*\|\s*([A-Ca-c])\s*\|\s*([A-Ca-c])\s*\|\s*([\s\S]*?)\s*(?:\|\s*(?:CORRECT|WRONG)\s*)?$/i))
+    .filter(Boolean)
+    .map(m=>({n:parseInt(m[1],10), mine:m[2].toUpperCase(), right:m[3].toUpperCase(), why:m[4].replace(/\|\s*$/,'').trim()}));
+}
+
+// Same parser skillcheck.html uses, so the review can show the real question and option text.
+function parseQuizText(raw){
+  const normalized = (raw||'')
+    .replace(/\s+(Q\d+:)/g,'\n$1').replace(/\s+(A\))/g,'\nA)').replace(/\s+(B\))/g,'\nB)')
+    .replace(/\s+(C\))/g,'\nC)').replace(/\s+(Correct:)/g,'\nCorrect:');
+  const out=[]; let cur=null;
+  normalized.split('\n').map(l=>l.trim()).filter(Boolean).forEach(line=>{
+    if(/^Q\d+:/i.test(line)){ if(cur) out.push(cur); cur={q:line.replace(/^Q\d+:\s*/i,''),opts:[]}; }
+    else if(cur && /^A\)/i.test(line)) cur.opts[0]=line.replace(/^A\)\s*/i,'');
+    else if(cur && /^B\)/i.test(line)) cur.opts[1]=line.replace(/^B\)\s*/i,'');
+    else if(cur && /^C\)/i.test(line)) cur.opts[2]=line.replace(/^C\)\s*/i,'');
+  });
+  if(cur) out.push(cur);
+  return out;
+}
+
+function gradeSection(norm, key){
+  const re = new RegExp('(?:^|\\n)'+key+':\\s*([\\s\\S]*?)(?=\\n(?:'+GRADE_KEY_RE+'):|$)');
+  const m  = norm.match(re);
+  return m ? m[1].trim() : '';
+}
+
 function parseGrade(raw){
-  const get = (key) => {
-    const re = new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z_]{2,}:|$)');
-    const m  = raw.match(re);
-    return m ? cleanR(m[1]) : '';
-  };
-  const statusRaw = get('STATUS').toUpperCase().trim();
-  const status    = ['READY','ALMOST','NOT_READY'].includes(statusRaw) ? statusRaw : 'ALMOST';
-  const scoreStr  = get('SCORE').replace('/12','').trim();
-  const score     = parseInt(scoreStr) || 7;
-  const breakdown = get('BREAKDOWN') || get('breakdown') || '';
-  return { status, score, breakdown };
+  const norm = normalizeGrade(raw);
+  const get  = (key) => gradeSection(norm, key);
+
+  // SCORE: "10/12" today, "14/20" after the S2 rewrite. Read both numbers.
+  const sm       = get('SCORE').match(/(\d+)\s*(?:\/\s*(\d+))?/);
+  const hasScore = !!sm;
+  let   max      = (sm && parseInt(sm[2],10)) || 12;
+  let   score    = sm ? Math.min(parseInt(sm[1],10), max) : 0;
+
+  // STATUS: trust S2 if it gave a valid one, otherwise derive it from the score
+  // (75% and 50% cut-offs match both the /12 and the /20 thresholds).
+  const statusRaw = get('STATUS').toUpperCase().replace(/[^A-Z_ ]/g,'').trim().replace(/\s+/g,'_');
+  let status = ['READY','ALMOST','NOT_READY'].includes(statusRaw) ? statusRaw : '';
+  if(!status){
+    const ratio = hasScore ? score/max : 0.5;
+    status = ratio >= 0.75 ? 'READY' : ratio >= 0.5 ? 'ALMOST' : 'NOT_READY';
+  }
+
+  const breakdown    = get('BREAKDOWN');
+  const learningPath = get('LEARNING_PATH');
+  const questions    = get('QUESTIONS');
+
+  // The student's letter and the correct letter are facts, so when S2 lists them we
+  // trust them over the model's own arithmetic: 2 points per correct answer.
+  const qs = parseQuestionLines(questions);
+  if(qs.length >= 3){
+    const right = qs.filter(q=>q.mine===q.right).length;
+    score = right*2; max = qs.length*2;
+    const ratio = score/max;
+    status = ratio >= 0.75 ? 'READY' : ratio >= 0.5 ? 'ALMOST' : 'NOT_READY';
+  }
+  return { status, score, max, breakdown, learningPath, questions, qs };
 }
 
 function pollResults(){
@@ -436,8 +510,8 @@ function pollResults(){
       const raw    = fields['Grade'] || fields['grade'] || '';
       const name   = fields['Name'] || fields['name'] || NAME;
       if(raw && raw.trim().length > 20){
-        const {status, score, breakdown} = parseGrade(raw);
-        applyData(status, score, breakdown, name);
+        const {status, score, max, breakdown} = parseGrade(raw);
+        applyData(status, score, breakdown, name, max);
       } else {
         pollCount++;
         if(pollCount < 60) setTimeout(pollResults, 3000);
@@ -451,13 +525,18 @@ function pollResults(){
     });
 }
 
-function applyData(STATUS, SCORE, BREAKDOWN, name){
+function applyData(STATUS, SCORE, BREAKDOWN, name, MAX){
+MAX = MAX || 12;
+SHOWN_SCORE = SCORE; SHOWN_MAX = MAX;
+// Name for the headline: Airtable first, URL param second. Escaped because it goes into innerHTML.
+const WHO = String(name || NAME).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.getElementById('score-denom').textContent = '/' + MAX;
 
 // STATUS CONFIG
 const cfg = {
   READY:{
     badgeClass:'ready', badgeText:'Ready',
-    headline:`You're ready,<br>${NAME}.`,
+    headline:`You're ready,<br>${WHO}.`,
     cardClass:'ready',
     cardText:`Your fundamentals are solid. Most people your age are still googling "how to make money online" — you actually know what you're doing. The work now is execution, not preparation. Every day you wait is a day someone else takes the client you could have had.`,
     btnContinue:'Show me my moves',
@@ -465,7 +544,7 @@ const cfg = {
   },
   ALMOST:{
     badgeClass:'almost', badgeText:'Almost There',
-    headline:`You're close,<br>${NAME}.`,
+    headline:`You're close,<br>${WHO}.`,
     cardClass:'almost',
     cardText:`You're closer than you think, but close isn't ready yet. There are gaps in your understanding that your first client will notice before you do. That's not a knock — it's just honest. One focused week with the right resources and you'll be in a completely different place.`,
     btnContinue:`I'm ready, show me my moves`,
@@ -473,7 +552,7 @@ const cfg = {
   },
   NOT_READY:{
     badgeClass:'notready', badgeText:'Not There Yet',
-    headline:`Be honest<br>with yourself, ${NAME}.`,
+    headline:`Be honest<br>with yourself, ${WHO}.`,
     cardClass:'notready',
     cardText:`The gaps are real and they matter. Going into client work right now means delivering work you can't stand behind — and that first bad experience is hard to shake. This isn't a wall, it's a week. The resources below are the exact path. Do the work. Come back stronger.`,
     btnContinue:`I'll take my chances`,
@@ -481,7 +560,7 @@ const cfg = {
   }
 }[STATUS] || {
   badgeClass:'almost', badgeText:'Almost There',
-  headline:`You're close,<br>${NAME}.`,
+  headline:`You're close,<br>${WHO}.`,
   cardClass:'almost',
   cardText:`You're closer than you think, but close isn't ready yet.`,
   btnContinue:`Show me my moves`,
@@ -520,7 +599,7 @@ revealMap.filter(r=>!r.scroll).forEach(r=>{
     const el=document.getElementById(r.id);
     if(el) el.classList.add('go');
     if(r.id==='score-block') startCounter();
-    if(r.id==='score-bar-wrap') setTimeout(()=>{ document.getElementById('score-bar-fill').style.width=`${(SCORE/12)*100}%`; },100);
+    if(r.id==='score-bar-wrap') setTimeout(()=>{ document.getElementById('score-bar-fill').style.width=`${(SCORE/MAX)*100}%`; },100);
     if(r.id==='review-wrap') renderQuestionReview();
   }, r.delay);
 });
@@ -556,43 +635,34 @@ function startCounter(){
 function renderQuestionReview(){
   const container = document.getElementById('q-cards');
   if(!container) return;
-  // Parse per-question results from FIELDS if available
-  // Expected format in Grade field: QUESTIONS: Q1|your_answer|correct_answer|why\nQ2|...
-  const raw = FIELDS['Grade'] || '';
-  const qSection = (raw.match(/QUESTIONS:([\s\S]*?)(?=\n[A-Z_]+:|$)/) || [])[1] || '';
-  const lines = qSection.trim().split('\n').filter(l=>l.trim().length>5);
+  const qs   = parseGrade(FIELDS['Grade'] || '').qs;
+  const quiz = parseQuizText(FIELDS['Skill Check Questions'] || FIELDS['Skill Check Questions '] || '');
 
-  // Fallback: generate placeholder cards based on score
-  if(lines.length === 0){
+  if(!qs.length){
     container.innerHTML = `<p style="font-size:13px;color:var(--muted);font-weight:300;line-height:1.6">
       Detailed question breakdown will appear here after your next skill check.
     </p>`;
     return;
   }
 
-  lines.forEach((line, idx)=>{
-    const parts = line.split('|');
-    const qText    = (parts[0]||'').trim();
-    const yourAns  = (parts[1]||'').trim();
-    const correctAns=(parts[2]||'').trim();
-    const why      = (parts[3]||'').trim();
-    const isCorrect = yourAns.toLowerCase() === correctAns.toLowerCase()
-                   || (parts[4]||'').trim().toUpperCase() === 'CORRECT';
+  qs.forEach((q, idx)=>{
+    const meta      = quiz[q.n-1] || {};
+    const opt       = (L)=> (meta.opts && meta.opts['ABC'.indexOf(L)]) || '';
+    const isCorrect = q.mine === q.right;
+    const qText     = meta.q || `Question ${q.n}`;
 
     const card = document.createElement('div');
     card.className = `q-card ${isCorrect?'correct':'wrong'}`;
     card.innerHTML = `
       ${isCorrect ? '<div class="q-fill"></div>' : ''}
       <div class="q-badge ${isCorrect?'correct':'wrong'}">${isCorrect?'✓ Correct':'✗ Wrong'}</div>
-      <div class="q-num">Question ${idx+1}</div>
-      <div class="q-text">${qText}</div>
-      <div class="q-your-answer">Your answer: <strong>${yourAns||'—'}</strong></div>
-      <div class="q-correct-answer">Correct answer: ${correctAns||'—'}</div>
-      ${why ? `<div class="q-why">${why}</div>` : ''}
+      <div class="q-num">Question ${q.n}</div>
+      <div class="q-text">${esc(qText)}</div>
+      <div class="q-your-answer">Your answer: <strong>${esc(q.mine)}</strong>${opt(q.mine)?' · '+esc(opt(q.mine)):''}</div>
+      ${isCorrect ? '' : `<div class="q-correct-answer">Correct answer: ${esc(q.right)}${opt(q.right)?' · '+esc(opt(q.right)):''}</div>`}
+      ${q.why ? `<div class="q-why">${esc(q.why)}</div>` : ''}
     `;
     container.appendChild(card);
-
-    // Staggered reveal
     setTimeout(()=>card.classList.add('go'), idx * 120);
   });
 }
@@ -650,7 +720,7 @@ setTimeout(pollResults, 5000);
   requestAnimationFrame(breath);
 })();
 
-// ── EASTER EGG: Hover score number 3s — counts up to 12 then back
+// ── EASTER EGG: Hover score number 3s — counts up to the max then back
 const scoreEl=document.getElementById('score-num');
 if(scoreEl){
   let hoverTimer, taunting=false;
@@ -658,12 +728,12 @@ if(scoreEl){
     if(taunting) return;
     hoverTimer=setTimeout(()=>{
       taunting=true;
-      const orig=SCORE;
+      const orig=SHOWN_SCORE;
       let cur=orig;
       const upInterval=setInterval(()=>{
         cur++;
         scoreEl.textContent=cur;
-        if(cur>=12){
+        if(cur>=SHOWN_MAX){
           clearInterval(upInterval);
           setTimeout(()=>{
             const downInterval=setInterval(()=>{
