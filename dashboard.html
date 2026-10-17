@@ -936,6 +936,7 @@ let state = {
   weekLog: [],         // array of 7 booleans for current week
   theme: 'dark',
   arcs: [],            // 4 general arcs from S8A
+  briefings: {},       // module number -> raw briefing text from the Module Briefings table
   titles: {},          // module index -> title, only once generated
   progress: [],        // Module Progress rows for this user
   fields: {},          // latest Airtable record fields
@@ -976,17 +977,28 @@ function getLevel(done){
 
 // ─── MILESTONES ───────────────────────────────────────────────────────────────
 const MILESTONES = {
-  14: {name:'FIRST CONTACT MADE.', quote:'"The body achieves what the mind believes."'},
-  29: {name:'FIRST RUPEE EARNED.', quote:'"Do not limit your challenges. Challenge your limits."'},
-  44: {name:"YOU'VE EARNED THIS.", quote:'"Success isn\'t given. It\'s earned."'},
-  59: {name:'MISSION COMPLETE.',   quote:'"You did what most people only talk about."'},
+  14: {name:'FIRST CONTACT MADE.', quote:'When you find a fear, that fear will either create you or destroy you.'},
+  29: {name:'FIRST RUPEE EARNED.', quote:'The hardest things in life are done the least but provide the most.'},
+  44: {name:"YOU'VE EARNED THIS.", quote:'Walk through the mud in life, if you ever want to get to the higher ground.'},
+  59: {name:'MISSION COMPLETE.',   quote:'Today it begins. Tomorrow it continues. And it never ends, until you reach your goal and cross the finish line.'},
 };
 
 // ─── PLITT QUOTES (fallback pool) ─────────────────────────────────────────────
 const PLITT_QUOTES = [
-  'Today it begins. Tomorrow it continues. And it never ends, until you reach your goal.',
-  "Success doesn't know cold or early or tired. It just knows if you showed up.",
+  'Today it begins. Tomorrow it continues. And it never ends, until you reach your goal and cross the finish line.',
+  "Success doesn't know these things about cold or early or tired. It just knows if you showed up or not.",
   'You only live once, but if you work it right, once is enough.',
+  'Your legs are not giving out. Your head is giving up.',
+  "Bet on yourself. If you bet on yourself you'll never lose.",
+  "It's early in the morning and your competition is still sleeping.",
+  'The mind always fails first, not the body. The secret is to make your mind work for you, not against you.',
+  'The clock is ticking, are you becoming the person you wanna be?',
+  'Walk through the mud in life, if you ever want to get to the higher ground.',
+  'When you find a fear, that fear will either create you or destroy you.',
+  'Having the will to win is everything.',
+  'You got one life to live. Why wait until tomorrow to start it?',
+  'The hardest things in life are done the least but provide the most.',
+  "Life is a plan of action, if you don't have a plan, someone is going to use you as part of their plan.",
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1718,8 +1730,25 @@ async function fetchRecord(){
 }
 
 function hasDetail(i){
+  return !!briefingRaw(i);
+}
+
+// Newest briefing for a module: Module Briefings table first, old Module Detail columns as fallback
+function briefingRaw(i){
+  const b = state.briefings[i+1];
+  if(b && b.raw && b.raw.includes('MODULE_TITLE:')) return b.raw;
   const raw = state.fields['Module Detail '+(i+1)];
-  return !!(raw && raw.includes('MODULE_TITLE:'));
+  return (raw && raw.includes('MODULE_TITLE:')) ? raw : '';
+}
+
+async function fetchBriefings(){
+  if(!RECORD_ID) return false;
+  try{
+    const r = await fetch(`${WORKER}/briefings?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
+    const d = await r.json();
+    if(d && d.briefings){ state.briefings = d.briefings; return true; }
+  }catch(e){}
+  return false;
 }
 
 function clientProfileText(f){
@@ -1801,11 +1830,16 @@ async function ensureGenerated(index, force){
 async function fetchModuleDetail(index, notEqual){
   if(!RECORD_ID) return null;
   try{
-    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
-    const d = await r.json();
-    if(d && d.fields) state.fields = d.fields;
-    const raw = d.fields?.[`Module Detail ${index+1}`] || '';
-    if(raw && raw.includes('MODULE_TITLE:') && raw!==notEqual) return raw;
+    await fetchBriefings();
+    const b = state.briefings[index+1];
+    if(b && b.raw && b.raw.includes('MODULE_TITLE:') && b.raw!==notEqual) return b.raw;
+    if(index<10){   // old data lives in the Module Detail columns
+      const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
+      const d = await r.json();
+      if(d && d.fields) state.fields = d.fields;
+      const raw = d.fields?.[`Module Detail ${index+1}`] || '';
+      if(raw && raw.includes('MODULE_TITLE:') && raw!==notEqual && !b) return raw;
+    }
   }catch(e){}
   return null;
 }
@@ -1927,7 +1961,7 @@ function parseCheckin(raw){
   return out;
 }
 
-let ck = {index:0, qs:[], ans:{}, num:{}, note:'', title:'', proof:'', raw:'', attempt:1, payload:null};
+let ck = {index:0, qs:[], ans:{}, num:{}, note:'', title:'', proof:'', raw:'', attempt:1, payload:null, proofType:'HONOUR', file:null, proofText:''};
 
 function ckBoxHTML(){
   const n = ck.index+1;
@@ -1942,10 +1976,46 @@ function ckBoxHTML(){
     }
     return `<div class="ck-q"><div class="ck-qt">${esc(q.text)}</div>${body}</div>`;
   }).join('');
+  let proofBlock = '';
+  if(ck.proofType==='SCREENSHOT'){
+    proofBlock = `<div class="ck-q"><div class="ck-qt">Proof: add a screenshot</div>
+      <div class="upload-zone" onclick="document.getElementById('ckFile').click()">
+        <input type="file" id="ckFile" accept="image/*" style="display:none" onchange="ckFile(this)">
+        <div class="upload-zone-text" id="ckFileLabel">Tap to add a screenshot</div>
+      </div></div>`;
+  } else if(ck.proofType==='TASK_PROOF'){
+    proofBlock = `<div class="ck-q"><div class="ck-qt">Proof: paste what you did</div>
+      <textarea class="ck-note" maxlength="1000" placeholder="The message you sent, the link, the numbers" oninput="ck.proofText=this.value"></textarea></div>`;
+  }
   return `${qs}
+    ${proofBlock}
     <div class="ck-q"><div class="ck-qt">Anything else? (optional)</div><textarea class="ck-note" maxlength="500" oninput="ck.note=this.value"></textarea></div>
     <div class="ck-msg" id="ckMsg"></div>
     <button class="proof-btn" id="ckSubmit" onclick="submitCheckin()">Finish check-in</button>`;
+}
+
+// Shrinks the photo on the phone first, so uploads stay small and quick
+function ckFile(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  if(!/^image\//.test(f.type)){ ckMsg('Pick an image file.'); return; }
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = ()=>{
+    const max = 1280;
+    const sc = Math.min(1, max/Math.max(img.width, img.height));
+    const w = Math.round(img.width*sc), h = Math.round(img.height*sc);
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const data = c.toDataURL('image/jpeg', 0.8);
+    URL.revokeObjectURL(url);
+    ck.file = {base64: data.split(',')[1], filename: 'proof-module-'+(ck.index+1)+'.jpg', contentType: 'image/jpeg'};
+    const lab = document.getElementById('ckFileLabel');
+    if(lab) lab.textContent = 'Screenshot added. Tap to change.';
+    ckMsg('');
+  };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); ckMsg('That image could not be read. Try a different one.'); };
+  img.src = url;
 }
 
 function ckPick(qi,oi,el){
@@ -1976,6 +2046,16 @@ async function submitCheckin(){
   let numbers = null, unit = '';
   if(nq>=0 && ck.num[nq]!==undefined && ck.num[nq]!==''){ numbers = parseFloat(ck.num[nq]); unit = ck.qs[nq].unit; }
 
+  // Proof is required once they say the mission is done
+  const pt = ck.proofType;
+  if(status==='DONE'){
+    if(pt==='SCREENSHOT' && !ck.file){ ckMsg('Add your screenshot to finish.'); return; }
+    if(pt==='TASK_PROOF' && (ck.proofText||'').trim().length<5){ ckMsg('Paste your proof to finish.'); return; }
+  }
+  const proofText = (pt==='TASK_PROOF') ? (ck.proofText||'').trim() : '';
+  if(proofText) answers.push(`Proof => ${proofText}`);
+  const proofGiven = (pt==='SCREENSHOT' && ck.file) ? 'SCREENSHOT' : (proofText ? 'TASK_PROOF' : 'HONOUR');
+
   ck.payload = {
     recordId: RECORD_ID,
     moduleNumber: ck.index+1,
@@ -1988,7 +2068,7 @@ async function submitCheckin(){
     numbersUnit: unit,
     blocker: weight==='NONE' ? '' : bOpt.label,
     blockerWeight: weight,
-    proofType: 'HONOUR',
+    proofType: proofGiven,
     note: ck.note
   };
 
@@ -2023,16 +2103,29 @@ function chooseOutcome(o){ finalizeCheckin(o); }
 async function finalizeCheckin(outcome){
   document.querySelectorAll('#ckBox button').forEach(b=>b.disabled=true);
   ckMsg('Saving...');
+  let rowId = '';
   try{
     const r = await fetch(`${WORKER}/checkin`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...ck.payload, outcome})});
     const d = await r.json();
     if(!r.ok || !d.ok) throw new Error(d.error||'save failed');
+    rowId = d.id || '';
   }catch(e){
     ckMsg('Could not save. Check your connection and try again.');
     document.querySelectorAll('#ckBox button').forEach(b=>b.disabled=false);
     return;
   }
   const index = ck.index;
+  if(ck.file && rowId){
+    ckMsg('Uploading screenshot...');
+    try{
+      const pr = await fetch(`${WORKER}/proof`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({recordId:RECORD_ID, rowId:rowId, filename:ck.file.filename, contentType:ck.file.contentType, base64:ck.file.base64})});
+      const pd = await pr.json();
+      if(!pr.ok || !pd.ok) throw new Error('upload failed');
+    }catch(e){
+      toast('Saved, but the screenshot did not upload.');
+    }
+    ck.file = null;
+  }
   await loadProgress(false);   // pulls the report we just saved, for the next module
 
   if(outcome==='COMPLETED' || outcome==='MOVED_ON'){
@@ -2062,7 +2155,9 @@ function renderModuleSections(raw, index){
   }
 
   const isDone = state.completed.has(index);
-  ck = {index:index, qs:parseCheckin(d.checkin), ans:{}, num:{}, note:'', title:d.title||(mod&&mod.title)||'', proof:d.proof||'', raw:raw, attempt:1, payload:null};
+  const ptRaw = String(d.proofType||'').toUpperCase().replace(/[^A-Z_]/g,'');
+  const proofType = ['SCREENSHOT','TASK_PROOF'].includes(ptRaw) ? ptRaw : 'HONOUR';
+  ck = {index:index, qs:parseCheckin(d.checkin), ans:{}, num:{}, note:'', title:d.title||(mod&&mod.title)||'', proof:d.proof||'', raw:raw, attempt:1, payload:null, proofType:proofType, file:null, proofText:''};
 
   const sections = [
     {label:'Before You Start',         html: renderMaterials(d.materials)},
@@ -2282,7 +2377,7 @@ function showMilestone(index){
   const m = MILESTONES[index];
   const mo = document.getElementById('milestoneOverlay');
   document.getElementById('milestoneName').textContent = m.name;
-  document.getElementById('milestoneQuote').textContent = m.quote;
+  document.getElementById('milestoneQuote').textContent = fmtQuote(m.quote);
   mo.classList.add('active');
   fireParticles();
 
@@ -2351,6 +2446,16 @@ document.getElementById('overlayBackdrop').addEventListener('click', closeOverla
 document.getElementById('profileBtn').addEventListener('click', ()=>{
   document.getElementById('pivotPanel').classList.toggle('open');
 });
+// Click anywhere outside the profile panel (or press Escape) to close it
+document.addEventListener('click', e=>{
+  const p = document.getElementById('pivotPanel');
+  if(!p.classList.contains('open')) return;
+  if(p.contains(e.target) || e.target.closest('#profileBtn')) return;
+  p.classList.remove('open');
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') document.getElementById('pivotPanel').classList.remove('open');
+});
 document.getElementById('pvName').textContent   = NAME;
 document.getElementById('pvHustle').textContent = HUSTLE;
 document.getElementById('pvNiche').textContent  = NICHE;
@@ -2416,9 +2521,10 @@ async function fetchFramework(){
   const arcs = parseArcs(f['Module Framework']||'');
   if(arcs.length<2) return null;   // old-format or empty data: treat as no framework, S8A will write the arcs
   state.arcs = arcs;
+  await fetchBriefings();
   for(let k=1;k<=60;k++){
-    const raw = f['Module Detail '+k];
-    if(raw && raw.includes('MODULE_TITLE:')){
+    const raw = briefingRaw(k-1);
+    if(raw){
       const t = parseModuleDetail(raw).title;
       if(t) state.titles[k-1] = t;
     }
