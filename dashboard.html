@@ -714,6 +714,22 @@ canvas#particles{position:absolute;inset:0;pointer-events:none}
   animation:moteFloat 1.4s ease-out forwards;
 }
 
+
+/* CHECK-IN + TOAST (adaptive report loop) */
+.ck-q{margin-bottom:22px}
+.ck-qt{font-size:14px;font-weight:500;line-height:1.5;color:var(--text);margin-bottom:10px}
+.ck-opt{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;background:var(--bg);color:var(--text);border:1px solid var(--divider);border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:300;line-height:1.4;cursor:pointer;transition:border-color .15s,background .15s}
+.ck-opt.sel{border-color:var(--text);background:var(--surface);font-weight:500}
+.ck-numrow{display:flex;align-items:center;gap:10px}
+.ck-num{width:120px;padding:11px 12px;background:var(--bg);color:var(--text);border:1px solid var(--divider);border-radius:8px;font-family:inherit;font-size:16px}
+.ck-unit{font-size:12px;color:var(--muted)}
+.ck-note{width:100%;min-height:64px;padding:10px 12px;background:var(--bg);color:var(--text);border:1px solid var(--divider);border-radius:8px;font-family:inherit;font-size:16px;resize:vertical}
+.ck-msg{min-height:18px;font-size:12px;color:var(--muted);margin:10px 0}
+.ck-alt{background:transparent;color:var(--text);border:1px solid var(--divider);margin-top:10px}
+.ck-hint{font-size:11px;color:var(--muted);margin:6px 0 0;line-height:1.5}
+.ck-done{font-size:14px;font-weight:300;line-height:1.7;color:var(--text);padding:16px;background:var(--bg);border-radius:8px;border-left:3px solid var(--text)}
+.fm-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:500;background:var(--text);color:var(--bg);padding:11px 18px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:86vw;text-align:center}
+.fm-toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
@@ -899,9 +915,16 @@ const S8B_WEBHOOK = 'https://hook.eu1.make.com/qrikkbglgtoyuim1n0sf3dktny6dxj24'
 
 const params = new URLSearchParams(location.search);
 const RECORD_ID = params.get('id') || '';
-const HUSTLE    = params.get('hustle') || 'Social Media Management';
-const NICHE     = params.get('niche') || 'Fitness Brands';
-const NAME      = params.get('name') || 'You';
+let CTX = {};
+try{ CTX = JSON.parse(localStorage.getItem('fm_ctx_'+RECORD_ID) || '{}'); }catch(e){}
+const HUSTLE    = params.get('hustle') || CTX.hustle || 'Social Media Management';
+const NICHE     = params.get('niche')  || CTX.niche  || 'Fitness Brands';
+const NAME      = params.get('name')   || CTX.name   || 'You';
+try{
+  if(params.get('hustle') || params.get('niche') || params.get('name')){
+    localStorage.setItem('fm_ctx_'+RECORD_ID, JSON.stringify({hustle:HUSTLE, niche:NICHE, name:NAME}));
+  }
+}catch(e){}
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let state = {
@@ -912,6 +935,12 @@ let state = {
   weeksWon: 0,
   weekLog: [],         // array of 7 booleans for current week
   theme: 'dark',
+  arcs: [],            // 4 general arcs from S8A
+  titles: {},          // module index -> title, only once generated
+  progress: [],        // Module Progress rows for this user
+  fields: {},          // latest Airtable record fields
+  lastReport: 'none',
+  recentModules: 'none',
 };
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
@@ -955,41 +984,79 @@ const MILESTONES = {
 
 // ─── PLITT QUOTES (fallback pool) ─────────────────────────────────────────────
 const PLITT_QUOTES = [
-  '"The best project you\'ll ever work on is you."',
-  '"Don\'t stop when you\'re tired. Stop when you\'re done."',
-  '"Make the most out of what you\'ve got."',
-  '"Get comfortable being uncomfortable."',
-  '"Champions aren\'t born. They\'re built."',
-  '"Every day is a new opportunity to improve."',
-  '"Earn your shower."',
+  'Today it begins. Tomorrow it continues. And it never ends, until you reach your goal.',
+  "Success doesn't know cold or early or tired. It just knows if you showed up.",
+  'You only live once, but if you work it right, once is enough.',
 ];
 
-// ─── DUMMY MODULE FRAMEWORK (replaced by Airtable data) ──────────────────────
-function buildDummyModules(){
-  const types = ['NORMAL','NORMAL','NORMAL','MILESTONE','NORMAL','NORMAL','DARKDAY','NORMAL','PREPDAY','NORMAL'];
-  const proofs = ['HONOUR','HONOUR','SCREENSHOT','HONOUR','TASK_PROOF','HONOUR','SCREENSHOT','HONOUR','HONOUR','SCREENSHOT'];
-  const phases = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
-  const titles = [
-    'Set Up Your Workspace','Create Your Brand Name','Build Your First Post','FIRST CONTACT MADE','DM Your First 5 Clients',
-    'Price Your Services','Face Your First Dark Day','Build Your Rate Card','Prepare For Cold Outreach','Cold Outreach Day 1',
-    'Follow Up System','Track Your Leads','Create Case Study','Refine Your Pitch','Land Your First Reply',
-    'FIRST MONEY READY','Discovery Call Script','Send First Invoice','Follow Up Strategy','Handle Objections',
-    'Close Your First Deal','Onboard Client','Set Expectations','Deliver Week One','First Client Review',
-    'Case Study Build','Referral Ask','Second Client Outreach','Package Your Services','FIRST RUPEE EARNED',
-    'Raise Your Rate','New Niche Test','Advanced Content','Analytics Deep Dive','Testimonial System',
-    'Build a Waitlist','Automate Outreach','Scale Content','Second Package','Build Social Proof',
-    'Platform Mastery','Revenue Review','Optimise Delivery','Delegation Test','YOU\'VE EARNED THIS',
-    'Long-Term Client Plan','Recurring Revenue','Systems Audit','Portfolio Build','New Platform Entry',
-    'Authority Content','Community Building','Speaking Opportunity','Referral Network','Scale System',
-    'Passive Income Test','Team of One','Year Review','Final Client Audit','MISSION COMPLETE',
-  ];
-  return Array.from({length:60},(_,i)=>({
-    title: titles[i] || `Day ${i+1}`,
-    type: i===6||i===26?'DARKDAY': i===8||i===25?'PREPDAY': [14,29,44,59].includes(i)?'MILESTONE':'NORMAL',
-    proofType: proofs[i%10],
-    time: 15 + (i%3)*5 + (i%7)*3,
-    phase: phases[i]||4,
-  }));
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// One pair of curly quotes, whatever the source text already had (fixes doubled quotes)
+function fmtQuote(q){
+  q = String(q||'').replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g,'');
+  return q ? '“'+q+'”' : '';
+}
+
+function toast(msg){
+  let t = document.getElementById('fmToast');
+  if(!t){ t=document.createElement('div'); t.id='fmToast'; t.className='fm-toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+// ─── MODULE TYPES + ARCS ──────────────────────────────────────────────────────
+// Types are fixed by module number. S8B uses the same rule.
+function modType(i){
+  const n = i+1;
+  if(n===6) return 'CLIENT_PROFILE';
+  if(n%15===0) return 'MILESTONE';
+  if(n%5===0) return 'SKILL_REMINDER';
+  return 'NORMAL';
+}
+
+// S8A output: "ARC 1: NAME | 1-15 | AIM | WHAT_HAPPENS | HARDEST_PART | CHECKPOINT" x4
+function parseArcs(raw){
+  if(!raw || !/ARC\s*\d+\s*:/.test(raw)) return [];
+  return raw.split(/(?=ARC\s*\d+\s*:)/).map(s=>s.trim()).filter(s=>/^ARC\s*\d+\s*:/.test(s)).slice(0,4).map((s,k)=>{
+    const body = s.replace(/^ARC\s*\d+\s*:\s*/,'');
+    const p = body.split('|').map(x=>x.trim());
+    const m = (p[1]||'').match(/(\d+)\D+(\d+)/);
+    return {
+      n:k+1, name:p[0]||('Arc '+(k+1)),
+      start:m?+m[1]:k*15+1, end:m?+m[2]:(k+1)*15,
+      aim:p[2]||'', what:p[3]||'', hard:p[4]||'', check:p[5]||'',
+      line:'ARC '+(k+1)+': '+body
+    };
+  });
+}
+
+function arcFor(i){
+  const n = i+1;
+  return state.arcs.find(a=>n>=a.start && n<=a.end) || state.arcs[Math.min(state.arcs.length-1, Math.floor(i/15))] || null;
+}
+
+// 60 placeholders. Only titles the user has already unlocked are known.
+function buildModules(){
+  return Array.from({length:60},(_,i)=>{
+    const a = arcFor(i);
+    return {
+      title: state.titles[i] || (modType(i)==='CLIENT_PROFILE' ? 'Your ideal client' : ''),
+      type: modType(i), proofType:'HONOUR', time:20,
+      phase: Math.floor(i/15)+1,
+      arc: a?a.n:0, arcName: a?a.name:''
+    };
+  });
+}
+
+// Label under a node: real title once known, otherwise the arc name on the first fogged node of each arc
+function nodeLabelText(mod,i){
+  if(mod.title) return mod.title;
+  if(MILESTONES[i]) return MILESTONES[i].name;
+  if(mod.arcName && (i===0 || state.modules[i-1].arc!==mod.arc)) return mod.arcName;
+  return '';
 }
 
 // ─── PATH GEOMETRY — wide spacing + varied Y ─────────────────────────────────
@@ -1426,11 +1493,11 @@ function buildPath(){
     const label = document.createElement('div');
     label.className='node-label';
     if(isMilestone && !isCompleted){
-      label.textContent = truncLabel(mod.title);
+      label.textContent = truncLabel(nodeLabelText(mod,i));
       label.style.color = isDark?'rgba(139,32,0,0.8)':'rgba(212,175,55,0.9)';
       label.style.fontWeight='600';
     } else {
-      label.textContent = truncLabel(mod.title);
+      label.textContent = truncLabel(nodeLabelText(mod,i));
     }
     node.appendChild(label);
 
@@ -1566,7 +1633,7 @@ function updateSidebar(){
 
   const mod = state.modules[state.activeModule];
   if(mod){
-    document.getElementById('todayTitle').textContent = mod.title;
+    document.getElementById('todayTitle').textContent = mod.title || 'Your next module';
     document.getElementById('todayTime').textContent  = `${mod.time} min`;
   }
 
@@ -1583,6 +1650,12 @@ function updateSidebar(){
 
 // ─── OPEN MODULE ─────────────────────────────────────────────────────────────
 async function openModule(index){
+  if(index > state.activeModule){ toast('Finish the module before this one first.'); return; }
+  if(modType(index)==='CLIENT_PROFILE'){
+    if(state.completed.has(index)) toast('Your client profile is saved.');
+    else goClient();
+    return;
+  }
   // Stage 1: Node pulse (0-280ms)
   const nodeWrap = document.querySelector(`[data-index="${index}"]`);
   if(nodeWrap){
@@ -1609,7 +1682,7 @@ async function openModule(index){
   const mod = state.modules[index];
   document.getElementById('popupModNum').textContent = `DAY ${index+1}`;
   document.getElementById('popupTitle').textContent  = mod?.title || '...';
-  document.getElementById('plittQuote').textContent  = PLITT_QUOTES[index%PLITT_QUOTES.length];
+  document.getElementById('plittQuote').textContent  = fmtQuote(PLITT_QUOTES[index%PLITT_QUOTES.length]);
 
   // Show loading
   const track = document.getElementById('swipeTrack');
@@ -1627,100 +1700,163 @@ async function openModule(index){
   if(detail){
     renderModuleSections(detail, index);
   } else {
-    fireS8B(index);
+    genCtx = {mode:'NEW', prev:'', raw:''};
+    await ensureGenerated(index);
     pollModuleDetail(index);
   }
 }
 let currentModuleIndex = 0;
 
-async function fetchModuleDetail(index){
+async function fetchRecord(){
   if(!RECORD_ID) return null;
   try{
     const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
     const d = await r.json();
-    const raw = d.fields?.[`Module Detail ${index+1}`] || d.fields?.['Module Detail'] || '';
-    if(raw && raw.includes('MODULE_TITLE:')) return raw;
+    if(d && d.fields){ state.fields = d.fields; return d.fields; }
   }catch(e){}
   return null;
 }
 
-async function fireS8B(index){
-  const mod = state.modules[index];
-  if(!mod||!RECORD_ID) return;
-  // Fetch full record to get user context fields
-  try{
-    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=1`);
-    const d = await r.json();
-    const f = d.fields || {};
-    const get = (keys) => { for(const k of keys){ const v=f[k]; if(v) return v; } return ''; };
-    fetch(S8B_WEBHOOK, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        recordId:        RECORD_ID,
-        moduleNumber:    index+1,
-        moduleTitle:     mod.title,
-        moduleType:      mod.type,
-        modulePhase:     mod.phase,
-        hustle:          HUSTLE,
-        niche:           NICHE,
-        name:            get(['Name','name']) || NAME,
-        age:             get(['Age','age']),
-        city:            get(['City','city']),
-        skillArea:       get(['Skills Multi','Skill Area']),
-        comfortLevel:    get(['Comfort Level','comfortLevel']) || 'INTERMEDIATE',
-        languages:       get(['Languages ','Languages']),
-        enjoysDoing:     get(['Enjoys doing','enjoysDoing']),
-        completedModules: Array.from(state.completed).join(',')
-      })
-    }).catch(()=>{});
-  } catch(e){
-    // Fallback with minimal fields
-    fetch(S8B_WEBHOOK, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        recordId:     RECORD_ID,
-        moduleNumber: index+1,
-        moduleTitle:  mod.title,
-        moduleType:   mod.type,
-        modulePhase:  mod.phase,
-        hustle:       HUSTLE,
-        niche:        NICHE,
-        name:         NAME,
-        comfortLevel: 'INTERMEDIATE'
-      })
-    }).catch(()=>{});
+function hasDetail(i){
+  const raw = state.fields['Module Detail '+(i+1)];
+  return !!(raw && raw.includes('MODULE_TITLE:'));
+}
+
+function clientProfileText(f){
+  for(const k of ['Client Profile','Ideal Client','Ideal client','Ideal Client Profile','Client profile']){
+    if(f[k]) return String(f[k]).slice(0,1500);
   }
+  return 'none';
+}
+
+// Reads this user's Module Progress rows from the Worker.
+// apply=true also rebuilds completed + active module from the saved rows.
+async function loadProgress(apply){
+  if(!RECORD_ID) return false;
+  try{
+    const r = await fetch(`${WORKER}/progress?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
+    const d = await r.json();
+    if(!r.ok || !Array.isArray(d.rows)) return false;
+    state.progress = d.rows;
+    state.lastReport = d.lastReport || 'none';
+    state.recentModules = d.recentModules || 'none';
+    if(apply){
+      const done = new Set(); let max = -1;
+      d.rows.forEach(x=>{
+        if(x.outcome==='COMPLETED' || x.outcome==='MOVED_ON'){ done.add(x.moduleNumber-1); max = Math.max(max, x.moduleNumber-1); }
+      });
+      state.completed = done;
+      state.activeModule = Math.min(59, max+1);
+      saveState();
+    }
+    return true;
+  }catch(e){ return false; }
+}
+const syncProgress = () => loadProgress(true);
+
+// Sends one module request to S8B, built from the saved report of the last attempt
+async function requestModule(index, mode, previousAttempt){
+  if(!RECORD_ID) return;
+  const f = (await fetchRecord()) || state.fields || {};
+  await loadProgress(false);
+  const get = (keys) => { for(const k of keys){ const v=f[k]; if(v) return v; } return ''; };
+  const a = arcFor(index);
+  const payload = {
+    recordId:        RECORD_ID,
+    moduleNumber:    index+1,
+    mode:            mode || 'NEW',
+    name:            get(['Name','name']) || NAME,
+    age:             get(['Age','age']),
+    city:            get(['City','city']),
+    hustle:          HUSTLE,
+    niche:           NICHE,
+    skillArea:       get(['Skills Multi','Skill Area']),
+    comfortLevel:    get(['Comfort Level','comfortLevel']) || 'INTERMEDIATE',
+    languages:       get(['Languages ','Languages']),
+    enjoysDoing:     get(['Enjoys doing','enjoysDoing']),
+    arc:             a ? a.line : '',
+    recentModules:   index===0 ? '' : state.recentModules,
+    clientProfile:   clientProfileText(f),
+    lastReport:      index===0 ? '' : state.lastReport,
+    previousAttempt: previousAttempt || ''
+  };
+  fetch(S8B_WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    .catch(e=>console.warn('S8B webhook error:', e));
+}
+
+// Generates a module only if it does not exist yet and was not requested in the last 100 seconds
+async function ensureGenerated(index, force){
+  if(index<0 || index>59) return;
+  if(modType(index)==='CLIENT_PROFILE') return;
+  if(!force && hasDetail(index)) return;
+  const key = 'fm_gen_'+RECORD_ID+'_'+index;
+  try{
+    const t = +sessionStorage.getItem(key) || 0;
+    if(!force && Date.now()-t < 100000) return;
+    sessionStorage.setItem(key, String(Date.now()));
+  }catch(e){}
+  await requestModule(index, 'NEW', '');
+}
+
+async function fetchModuleDetail(index, notEqual){
+  if(!RECORD_ID) return null;
+  try{
+    const r = await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=${Date.now()}`);
+    const d = await r.json();
+    if(d && d.fields) state.fields = d.fields;
+    const raw = d.fields?.[`Module Detail ${index+1}`] || '';
+    if(raw && raw.includes('MODULE_TITLE:') && raw!==notEqual) return raw;
+  }catch(e){}
+  return null;
+}
+
+function showLoading(text){
+  document.getElementById('swipeTrack').innerHTML = `<div class="swipe-section"><div class="loading-state"><div class="loading-text">${esc(text)}</div><div class="loading-bar"><div class="loading-fill"></div></div></div></div>`;
+  buildSectionBar(8);
+  goToSection(0);
 }
 
 let pollTimer;
-function pollModuleDetail(index, tries=0){
+let genCtx = {mode:'NEW', prev:'', raw:''};
+function pollModuleDetail(index, tries=0, notEqual=''){
   clearTimeout(pollTimer);
-  if(tries>20) return;
+  if(tries>40){ showGenFail(index); return; }
   pollTimer = setTimeout(async()=>{
-    const detail = await fetchModuleDetail(index);
+    const detail = await fetchModuleDetail(index, notEqual);
     if(detail){
       renderModuleSections(detail, index);
     } else {
-      pollModuleDetail(index, tries+1);
+      pollModuleDetail(index, tries+1, notEqual);
     }
   },3000);
 }
 
+function showGenFail(index){
+  document.getElementById('swipeTrack').innerHTML = `<div class="swipe-section">
+    <div class="section-title">Taking longer than usual</div>
+    <div class="proof-desc">Your briefing did not arrive yet. Nothing is lost. Try again.</div>
+    <button class="proof-btn" onclick="retryGenerate(${index})">Try again</button></div>`;
+  buildSectionBar(8);
+}
+
+async function retryGenerate(index){
+  showLoading('Loading your briefing...');
+  if(genCtx.mode==='REFRAME') await requestModule(index,'REFRAME',genCtx.prev);
+  else await requestModule(index,'NEW','');
+  pollModuleDetail(index, 0, genCtx.raw);
+}
+
+function goClient(){
+  const q = new URLSearchParams({id:RECORD_ID, hustle:HUSTLE, niche:NICHE, name:NAME});
+  location.href = 'client.html?'+q.toString();
+}
+
 // ─── PARSE S8B OUTPUT ─────────────────────────────────────────────────────────
 function parseModuleDetail(raw){
-  // Normalize — Worker strips newlines, so insert them before known field names
-  const normalized = raw
-    .replace(/\s+(MODULE_TITLE:)/g, '\n$1')
-    .replace(/\s+(PLITT_QUOTE:)/g, '\nPLITT_QUOTE:')
-    .replace(/\s+(MATERIALS_NEEDED:)/g, '\nMATERIALS_NEEDED:')
-    .replace(/\s+(OVERVIEW:)/g, '\nOVERVIEW:')
-    .replace(/\s+(WHY_THIS_MATTERS:)/g, '\nWHY_THIS_MATTERS:')
-    .replace(/\s+(THE_MISSION:)/g, '\nTHE_MISSION:')
-    .replace(/\s+(SCRIPT_OR_TEMPLATE:)/g, '\nSCRIPT_OR_TEMPLATE:')
-    .replace(/\s+(PROOF_OF_COMPLETION:)/g, '\nPROOF_OF_COMPLETION:')
-    .replace(/\s+(COACH_NOTE:)/g, '\nCOACH_NOTE:');
+  // Worker strips newlines, so put one back before each known field name
+  const keys = ['MODULE_TITLE','MODULE_TYPE','PROOF_TYPE','TIME_MINUTES','PLITT_QUOTE','MATERIALS_NEEDED','OVERVIEW','WHY_THIS_MATTERS','THE_MISSION','SCRIPT_OR_TEMPLATE','PROOF_OF_COMPLETION','COACH_NOTE','CHECKIN'];
+  let normalized = raw;
+  keys.forEach(k=>{ normalized = normalized.replace(new RegExp('\\s+('+k+':)','g'), '\n$1'); });
 
   const get=(key)=>{
     const re=new RegExp(key+':\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z_]+:|$)');
@@ -1729,6 +1865,9 @@ function parseModuleDetail(raw){
   };
   return {
     title:    get('MODULE_TITLE'),
+    type:     get('MODULE_TYPE'),
+    proofType:get('PROOF_TYPE'),
+    time:     parseInt(get('TIME_MINUTES'))||0,
     quote:    get('PLITT_QUOTE'),
     materials:get('MATERIALS_NEEDED'),
     overview: get('OVERVIEW'),
@@ -1737,14 +1876,193 @@ function parseModuleDetail(raw){
     script:   get('SCRIPT_OR_TEMPLATE'),
     proof:    get('PROOF_OF_COMPLETION'),
     coach:    get('COACH_NOTE'),
+    checkin:  get('CHECKIN'),
   };
+}
+
+// ─── CHECK-IN ─────────────────────────────────────────────────────────────────
+// CHECKIN lines: "Q1: text | ROLE: STATUS | OPTIONS: a [DONE]; b [PARTLY]; c [NOT]"
+//                "Q2: text | ROLE: NUMBERS | UNIT: replies"
+//                "Q3: text | ROLE: BLOCKER | OPTIONS: a [QUICK]; b [HEAVY]; c [NONE]"
+// The [TAG] is hidden from the user and drives what happens next.
+function defaultCheckin(){
+  return [
+    {text:"Did you finish today's mission?", role:'STATUS', unit:'', options:[{label:'Yes, all of it',tag:'DONE'},{label:'Some of it',tag:'PARTLY'},{label:'Not yet',tag:'NOT'}]},
+    {text:'What slowed you down?', role:'BLOCKER', unit:'', options:[{label:'Nothing, it went smooth',tag:'NONE'},{label:'Something small I can fix quickly',tag:'QUICK'},{label:'Something that needs more time or another person',tag:'HEAVY'}]}
+  ];
+}
+
+function parseCheckin(raw){
+  const out = [];
+  String(raw||'').split(/\s*(?=Q\d+\s*:)/).forEach(seg=>{
+    seg = seg.trim();
+    if(!/^Q\d+\s*:/.test(seg)) return;
+    const parts = seg.replace(/^Q\d+\s*:\s*/,'').split(/\s\|\s/).map(s=>s.trim());
+    const q = {text:parts[0], role:'', options:[], unit:''};
+    parts.slice(1).forEach(p=>{
+      let m;
+      if((m=p.match(/^ROLE:\s*(\w+)/))) q.role = m[1].toUpperCase();
+      else if((m=p.match(/^OPTIONS:\s*(.*)$/))) q.options = m[1].split(';').map(s=>s.trim()).filter(Boolean).map(s=>{
+        const t = s.match(/\[(DONE|PARTLY|NOT|QUICK|HEAVY|NONE)\]\s*$/i);
+        return {label:s.replace(/\s*\[[A-Za-z]+\]\s*$/,'').trim(), tag:t?t[1].toUpperCase():''};
+      });
+      else if((m=p.match(/^UNIT:\s*(.*)$/))) q.unit = m[1].trim();
+    });
+    if(!q.text || !q.role) return;
+    // tags missing or wrong for the role: infer from position so the flow never breaks
+    if(q.role==='STATUS'){
+      const order=['DONE','PARTLY','NOT'];
+      q.options.forEach((o,i)=>{ if(!order.includes(o.tag)) o.tag = order[Math.min(i,2)]; });
+      if(q.options.length<2) return;
+    }
+    if(q.role==='BLOCKER'){
+      q.options.forEach((o,i)=>{ if(!['QUICK','HEAVY','NONE'].includes(o.tag)) o.tag = (i===q.options.length-1)?'NONE':'QUICK'; });
+      if(q.options.length<2) return;
+    }
+    out.push(q);
+  });
+  const d = defaultCheckin();
+  if(!out.some(q=>q.role==='STATUS')) out.unshift(d[0]);
+  if(!out.some(q=>q.role==='BLOCKER')) out.push(d[1]);
+  return out;
+}
+
+let ck = {index:0, qs:[], ans:{}, num:{}, note:'', title:'', proof:'', raw:'', attempt:1, payload:null};
+
+function ckBoxHTML(){
+  const n = ck.index+1;
+  const attempt = state.progress.filter(r=>r.moduleNumber===n).length+1;
+  ck.attempt = attempt;
+  const qs = ck.qs.map((q,qi)=>{
+    let body = '';
+    if(q.role==='NUMBERS'){
+      body = `<div class="ck-numrow"><input class="ck-num" type="number" inputmode="decimal" min="0" placeholder="0" oninput="ckNum(${qi},this.value)"><span class="ck-unit">${esc(q.unit)}</span></div>`;
+    } else {
+      body = q.options.map((o,oi)=>`<button class="ck-opt" type="button" onclick="ckPick(${qi},${oi},this)">${esc(o.label)}</button>`).join('');
+    }
+    return `<div class="ck-q"><div class="ck-qt">${esc(q.text)}</div>${body}</div>`;
+  }).join('');
+  return `${qs}
+    <div class="ck-q"><div class="ck-qt">Anything else? (optional)</div><textarea class="ck-note" maxlength="500" oninput="ck.note=this.value"></textarea></div>
+    <div class="ck-msg" id="ckMsg"></div>
+    <button class="proof-btn" id="ckSubmit" onclick="submitCheckin()">Finish check-in</button>`;
+}
+
+function ckPick(qi,oi,el){
+  ck.ans[qi] = oi;
+  el.parentElement.querySelectorAll('.ck-opt').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function ckNum(qi,v){ ck.num[qi] = v; }
+function ckMsg(t){ const m=document.getElementById('ckMsg'); if(m) m.textContent=t||''; }
+
+function reframeCount(n){ return state.progress.filter(r=>r.moduleNumber===n && r.outcome==='REFRAMED').length; }
+
+async function submitCheckin(){
+  const sq = ck.qs.findIndex(q=>q.role==='STATUS');
+  const bq = ck.qs.findIndex(q=>q.role==='BLOCKER');
+  if(ck.ans[sq]===undefined || ck.ans[bq]===undefined){ ckMsg('Answer the first and the last question to finish.'); return; }
+
+  const status = ck.qs[sq].options[ck.ans[sq]].tag;
+  const bOpt   = ck.qs[bq].options[ck.ans[bq]];
+  const weight = bOpt.tag;
+
+  const answers = [];
+  ck.qs.forEach((q,qi)=>{
+    if(q.role==='NUMBERS'){ if(ck.num[qi]!==undefined && ck.num[qi]!=='') answers.push(`${q.text} => ${ck.num[qi]} ${q.unit}`); }
+    else if(ck.ans[qi]!==undefined) answers.push(`${q.text} => ${q.options[ck.ans[qi]].label}`);
+  });
+  const nq = ck.qs.findIndex(q=>q.role==='NUMBERS');
+  let numbers = null, unit = '';
+  if(nq>=0 && ck.num[nq]!==undefined && ck.num[nq]!==''){ numbers = parseFloat(ck.num[nq]); unit = ck.qs[nq].unit; }
+
+  ck.payload = {
+    recordId: RECORD_ID,
+    moduleNumber: ck.index+1,
+    attempt: ck.attempt,
+    moduleTitle: ck.title,
+    status: status,
+    checkinQuestions: ck.qs.map(q=>q.text).join(' || '),
+    checkinAnswers: answers.join(' || '),
+    numbers: (numbers!==null && isFinite(numbers)) ? numbers : '',
+    numbersUnit: unit,
+    blocker: weight==='NONE' ? '' : bOpt.label,
+    blockerWeight: weight,
+    proofType: 'HONOUR',
+    note: ck.note
+  };
+
+  // What happens next
+  //  DONE                       -> module completes (a heavy blocker still goes into the report for the next module)
+  //  PARTLY/NOT + QUICK blocker -> module completes, the next one opens with a 5 minute fix
+  //  PARTLY + no blocker        -> module completes
+  //  NOT + no blocker           -> module stays open
+  //  PARTLY/NOT + HEAVY blocker -> user chooses: keep at it / find another way / move on (after 2 reframes)
+  if(status==='DONE'){ return finalizeCheckin('COMPLETED'); }
+  if(weight==='HEAVY'){ return showChoice(); }
+  if(weight==='QUICK'){ return finalizeCheckin('COMPLETED'); }
+  return finalizeCheckin(status==='PARTLY' ? 'COMPLETED' : 'HELD');
+}
+
+function showChoice(){
+  const box = document.getElementById('ckBox');
+  const canMoveOn = reframeCount(ck.index+1) >= 2;
+  box.innerHTML = `
+    <div class="section-title">That one needs more time</div>
+    <div class="proof-desc">Some things cannot be forced in one sitting. What do you want to do?</div>
+    <button class="proof-btn" onclick="chooseOutcome('HELD')">Keep at it</button>
+    <div class="ck-hint">Same module stays open. Come back when you have something to report.</div>
+    <button class="proof-btn ck-alt" onclick="chooseOutcome('REFRAMED')">Find another way</button>
+    <div class="ck-hint">The module is rewritten with a different route to the same goal.</div>
+    ${canMoveOn ? `<button class="proof-btn ck-alt" onclick="chooseOutcome('MOVED_ON')">Move on</button><div class="ck-hint">Skip this one and open the next module.</div>` : ''}
+    <div class="ck-msg" id="ckMsg"></div>`;
+}
+
+function chooseOutcome(o){ finalizeCheckin(o); }
+
+async function finalizeCheckin(outcome){
+  document.querySelectorAll('#ckBox button').forEach(b=>b.disabled=true);
+  ckMsg('Saving...');
+  try{
+    const r = await fetch(`${WORKER}/checkin`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...ck.payload, outcome})});
+    const d = await r.json();
+    if(!r.ok || !d.ok) throw new Error(d.error||'save failed');
+  }catch(e){
+    ckMsg('Could not save. Check your connection and try again.');
+    document.querySelectorAll('#ckBox button').forEach(b=>b.disabled=false);
+    return;
+  }
+  const index = ck.index;
+  await loadProgress(false);   // pulls the report we just saved, for the next module
+
+  if(outcome==='COMPLETED' || outcome==='MOVED_ON'){
+    ensureGenerated(index+1);  // next module is written from this report, in the background
+    completeModule(index);
+  } else if(outcome==='HELD'){
+    closeOverlay();
+    toast('Saved. This module stays open.');
+  } else if(outcome==='REFRAMED'){
+    genCtx = {mode:'REFRAME', prev:ck.raw, raw:ck.raw};
+    showLoading('Finding another way...');
+    await requestModule(index, 'REFRAME', `Title: ${ck.title} | Proof: ${ck.proof}`);
+    pollModuleDetail(index, 0, ck.raw);
+  }
 }
 
 function renderModuleSections(raw, index){
   const d = parseModuleDetail(raw);
   const mod = state.modules[index];
 
-  if(d.quote) document.getElementById('plittQuote').textContent = d.quote;
+  if(d.quote) document.getElementById('plittQuote').textContent = fmtQuote(d.quote);
+  if(d.title){
+    state.titles[index] = d.title;
+    if(mod){ mod.title = d.title; if(d.time) mod.time = d.time; }
+    document.getElementById('popupTitle').textContent = d.title;
+    updateSidebar();
+  }
+
+  const isDone = state.completed.has(index);
+  ck = {index:index, qs:parseCheckin(d.checkin), ans:{}, num:{}, note:'', title:d.title||(mod&&mod.title)||'', proof:d.proof||'', raw:raw, attempt:1, payload:null};
 
   const sections = [
     {label:'Before You Start',         html: renderMaterials(d.materials)},
@@ -1754,6 +2072,9 @@ function renderModuleSections(raw, index){
     {label:'Script / Template',        html: `<div class="section-body"><p style="white-space:pre-line">${d.script||'Not required this module.'}</p></div>`},
     {label:'You\'re Done When...',     html: `<div class="done-when">${d.proof||'...'}</div>`},
     {label:'Coach Note',               html: `<div class="stuck-text">${d.coach||'...'}</div>`},
+    {label:'Check-in',                 html: isDone
+        ? `<div class="ck-done">This module is complete.</div>`
+        : `<div id="ckBox">${ckBoxHTML()}</div>`},
   ];
 
   const track = document.getElementById('swipeTrack');
@@ -1812,7 +2133,7 @@ let currentSection = 0;
 let totalSections  = 8;
 let touchStartX = 0;
 
-const SECTION_LABELS = ['Before You Start','What You Are Doing','Why It Matters','Your Tasks','Done When','Proof','Stuck?','Words to Know'];
+const SECTION_LABELS = ['Before You Start','What You Are Doing','Why It Matters','The Mission','Script / Template','Done When','Coach Note','Check-in'];
 
 function buildSectionBar(n){
   totalSections = n;
@@ -1848,6 +2169,8 @@ function goToSection(i){
 
 function initSwipe(){
   const sc = document.getElementById('swipeContainer');
+  if(sc._swipeInit) return;
+  sc._swipeInit = true;
   let _tx=0;
   sc.addEventListener('touchstart', e=>{ _tx=e.touches[0].clientX; },{passive:true});
   sc.addEventListener('touchend', e=>{
@@ -1857,6 +2180,7 @@ function initSwipe(){
   // Also keyboard arrows when overlay open
   document._sectionKeyHandler = (e)=>{
     if(!document.getElementById('moduleOverlay').classList.contains('open')) return;
+    if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     if(e.key==='ArrowRight') goToSection(currentSection+1);
     if(e.key==='ArrowLeft')  goToSection(currentSection-1);
     if(e.key==='Escape')     closeOverlay();
@@ -2085,16 +2409,21 @@ function loadState(){
   }
 }
 
-// ─── FETCH MODULE FRAMEWORK FROM AIRTABLE ─────────────────────────────────────
+// ─── FETCH MODULE FRAMEWORK (ARCS) FROM AIRTABLE ──────────────────────────────
 async function fetchFramework(){
-  if(!RECORD_ID){ return null; }
-  try{
-    const r=await fetch(`${WORKER}?id=${encodeURIComponent(RECORD_ID)}&bust=1`);
-    const d=await r.json();
-    const raw=d.fields?.['Module Framework']||'';
-    if(raw && raw.length>100) return parseFramework(raw);
-  }catch(e){}
-  return null;
+  const f = await fetchRecord();
+  if(!f) return null;
+  const arcs = parseArcs(f['Module Framework']||'');
+  if(arcs.length<2) return null;   // old-format or empty data: treat as no framework, S8A will write the arcs
+  state.arcs = arcs;
+  for(let k=1;k<=60;k++){
+    const raw = f['Module Detail '+k];
+    if(raw && raw.includes('MODULE_TITLE:')){
+      const t = parseModuleDetail(raw).title;
+      if(t) state.titles[k-1] = t;
+    }
+  }
+  return buildModules();
 }
 
 async function fireS8A(){
@@ -2143,16 +2472,23 @@ async function fireS8A(){
   }
 }
 
-// Poll for framework after S8A fires
+// Poll for the arcs after S8A fires
 let s8aPolls = 0;
+async function startDashboard(mods){
+  state.modules = mods;
+  await syncProgress();            // completed modules and active module come from saved check-ins
+  document.getElementById('entryScreen').style.display='none';
+  document.getElementById('layout').style.opacity='1';
+  buildPath();
+  updateSidebar();
+  await handleClientDone();
+  ensureGenerated(state.activeModule);
+}
+
 async function pollForFramework(){
   const framework = await fetchFramework();
   if(framework && framework.length >= 10){
-    state.modules = framework;
-    document.getElementById('entryScreen').style.display='none';
-    document.getElementById('layout').style.opacity='1';
-    buildPath();
-    updateSidebar();
+    await startDashboard(framework);
     return;
   }
   s8aPolls++;
@@ -2162,38 +2498,40 @@ async function pollForFramework(){
   if(s8aPolls === 30 && msg) msg.textContent = 'ALMOST READY...';
   if(s8aPolls < 60) setTimeout(pollForFramework, 3000);
   else {
-    // Give up — use dummy modules
-    state.modules = buildDummyModules();
-    document.getElementById('entryScreen').style.display='none';
-    document.getElementById('layout').style.opacity='1';
-    buildPath();
-    updateSidebar();
+    // Give up on the arcs — plain unlabelled path, modules still generate one by one
+    await startDashboard(buildModules());
   }
 }
 
-function parseFramework(raw){
-  // Worker strips newlines — split on the numbered entry pattern instead
-  // Format: "1. TITLE: X | TYPE: Y | PROOF: Z | TIME: N | PHASE: N 2. TITLE: ..."
-  const normalized = raw.replace(/(\d+\.)\s+TITLE:/g, '\n$1 TITLE:');
-  return normalized.split('\n').filter(l=>l.trim() && /^\d+\./.test(l.trim())).slice(0,60).map((l,i)=>{
-    const clean = l.replace(/^\d+\.\s*/, '').trim();
-    const getField = (name) => {
-      const m = clean.match(new RegExp(name+':\\s*([^|]+)'));
-      return m ? m[1].trim() : '';
-    };
-    const title    = getField('TITLE') || clean.split('|')[0].trim() || 'Day '+(i+1);
-    const typeRaw  = getField('TYPE')  || 'NORMAL';
-    const proofRaw = getField('PROOF') || 'HONOUR';
-    const timeRaw  = parseInt(getField('TIME')) || 20;
-    const phaseRaw = parseInt(getField('PHASE')) || (i<15?1:i<30?2:i<45?3:4);
-    return {
-      title:     title,
-      type:      typeRaw.toUpperCase(),
-      proofType: proofRaw.toUpperCase(),
-      time:      timeRaw,
-      phase:     phaseRaw,
-    };
-  });
+// Returning from client.html?clientDone=1 : module 6 is done
+async function handleClientDone(){
+  if(params.get('clientDone')!=='1') return;
+  if(state.completed.has(5)) { stripClientDone(); return; }
+  if(state.activeModule!==5) return;
+  try{
+    const r = await fetch(`${WORKER}/checkin`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+      recordId:RECORD_ID, moduleNumber:6, attempt:1, moduleTitle:'Your ideal client',
+      status:'DONE', outcome:'COMPLETED', proofType:'HONOUR', checkinAnswers:'Completed the client profile'
+    })});
+    const d = await r.json();
+    if(!r.ok || !d.ok) throw new Error('save failed');
+  }catch(e){
+    toast('Could not save your client profile. Reload to try again.');
+    return;
+  }
+  stripClientDone();
+  await syncProgress();
+  logDayActivity();
+  updateSidebar();
+  rebuildPath();
+  toast('Client profile saved.');
+  ensureGenerated(state.activeModule);
+}
+function stripClientDone(){
+  try{
+    const q = new URLSearchParams(location.search); q.delete('clientDone');
+    history.replaceState(null,'',location.pathname+(q.toString()?'?'+q.toString():''));
+  }catch(e){}
 }
 
 // ─── PREVIEW SAMPLE DATA ──────────────────────────────────────────────────────
@@ -2248,18 +2586,12 @@ async function init(){
     saveState();
   }
 
-  // Try to get existing framework from Airtable
+  // Arcs exist already? Then show the dashboard. Otherwise ask S8A for them and wait.
   const framework = await fetchFramework();
 
   if(framework && framework.length >= 10){
-    // Framework exists — load it and show dashboard
-    state.modules = framework;
-    document.getElementById('entryScreen').style.display='none';
-    document.getElementById('layout').style.opacity='1';
-    buildPath();
-    updateSidebar();
+    await startDashboard(framework);
   } else {
-    // No framework yet — fire S8A and poll
     const entryTitle = document.getElementById('entryTitle');
     if(entryTitle) entryTitle.textContent = 'BUILDING YOUR PATH.';
     await fireS8A();
